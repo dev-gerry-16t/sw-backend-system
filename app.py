@@ -6,6 +6,8 @@ from routes.carInformation import carInfo
 from routes.process import process
 from routes.profile import profileRouter
 from routes.bank import bankRouter
+from routes.systemConfig import system
+from routes.loans import loanRouter
 
 app = FastAPI()
 
@@ -28,3 +30,5 @@ app.include_router(carInfo)
 app.include_router(process)
 app.include_router(profileRouter)
 app.include_router(bankRouter)
+app.include_router(system)
+app.include_router(loanRouter)

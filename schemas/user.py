@@ -29,4 +29,5 @@ def userLoginEntity(item) -> dict:
             "lastLoginAt":item["lastLoginAt"] or "",
             "token":item["token"],
             "path":item["path"] or "/home",
+            "profileInformation":item["profileInformation"],
     }

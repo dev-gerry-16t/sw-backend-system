@@ -1,9 +1,10 @@
 from datetime import datetime
 from fastapi import APIRouter
-from models.process import SetNewProcess, ResponseNewProcess, ResponseAllProcess, ResponseProcessById, ResponseGetPersonalInfo
+from models.process import SetNewProcess, ResponseNewProcess, ResponseAllProcess, ResponseProcessById, ResponseGetPersonalInfo, ResponseGetCarInfo, ResponseGetBankInfo, RequestUpdateProcessById
 from config.db import db
 from utils.generateUUID import generate_UUID
 from schemas.process import processResponseEntity
+from utils.email import Email
 
 process = APIRouter()
 
@@ -12,6 +13,8 @@ tags_metadata = ["Process V1"]
 collection_process = db["process"]
 collection_profile = db["profile"]
 collection_user = db["user"]
+collection_car_info = db["carInformation"]
+collection_bank_info = db["bank"]
 
 @process.post("/api/v1/process/create", response_model= ResponseNewProcess ,tags = tags_metadata)
 def create_process(process: SetNewProcess):
@@ -110,6 +113,75 @@ def get_personal_info(idSystemUser: str):
         "addressInformation":address_info,
     }
 
+@process.get("/api/v1/process/getCarInfo/{idSystemUser}", response_model= ResponseGetCarInfo ,tags = tags_metadata)
+def get_personal_info(idSystemUser: str):
+
+    car_info = dict(collection_car_info.find_one({"idSystemUser": idSystemUser},{"_id":0,"idCarInformation":0,"idSystemUser":0}).get("information",{}))
+ 
+
+    return car_info
+
+@process.get("/api/v1/process/getBankInfo/{idSystemUser}", response_model= ResponseGetBankInfo ,tags = tags_metadata)
+def get_personal_info(idSystemUser: str):
+
+    bank_info = dict(collection_bank_info.find_one({"idSystemUser": idSystemUser},{"_id":0,"idBankAccounts":0,"idSystemUser":0}).get("bankInformation",[])[0])
+ 
+
+    return bank_info
+
+@process.put("/api/v1/process/updateById/{idProcess}",tags = tags_metadata)
+def update_process_by_id(idProcess: str, process: RequestUpdateProcessById):
+    request_process = dict(process)
+    id_system_user = request_process["idSystemUser"]
+    
+    email = Email()
+
+    filter_query = {"idSystemUser":id_system_user,"process.idProcess": idProcess}
+
+    new_values = {"$set": {}}
+
+    for key, value in request_process.items():
+        if key not in ["idProcess", "idSystemUser", "amountApprovedCreditFormatted"]:
+            field = f"process.$.{key.replace('_', '')}"
+            new_values["$set"][field] = value
+
+    collection_process.find_one_and_update(filter_query, new_values)
+    user_info = dict(collection_user.find_one({"idSystemUser": id_system_user},{"email":1}))
+    profile_name = collection_profile.find_one({"idSystemUser": id_system_user}).get("profileInformation", {}).get("name")
+
+    template_name=""
+    email_to = user_info["email"]
+    email_from = "no-reply@info.swip.mx"
+    template_data = {}
+
+    if request_process["idStatus"] == 2:
+        template_name="SW_APPROVEDCREDIT_V2"
+        template_data = {
+            "user": profile_name,
+            "amountApprovedCredit":f'{request_process["amountApprovedCreditFormatted"]} MXN',
+             }
+        email.send_email_template(
+            template_name = template_name,
+            email_to = email_to,
+            email_from = email_from,
+            template_data = template_data
+        )
+    elif request_process["idStatus"] == 3:
+        template_name="SW_REJECTEDCREDIT_V1"
+        template_data = {
+            "user": profile_name,
+             }
+        email.send_email_template(
+            template_name = template_name,
+            email_to = email_to,
+            email_from = email_from,
+            template_data = template_data
+        )
+
+
+    return {
+        "message": "Process updated successfully"
+    }
 
 
 

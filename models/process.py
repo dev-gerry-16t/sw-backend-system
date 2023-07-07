@@ -62,4 +62,34 @@ class ResponseGetPersonalInfo(BaseModel):
     numberId: str
     addressInformation: List[ListAddress]
 
+class ResponseGetCarInfo(BaseModel):
+    brand: str
+    model: str
+    type: str
+    transmissionType: str
+    color: str
+    year: str
+    mileage: str
+    amountPrice: int
+    plateState: str
+
+class ResponseGetBankInfo(BaseModel):
+    idBankAccount: str
+    beneficiary: str
+    numberAccount: str
+    clabe: str
+    bank: str
+
+class RequestUpdateProcessById(BaseModel):
+    idSystemUser: str
+    amountApprovedCreditFormatted: Union[str, None]
+    idStatus: Union[int, None]
+    amountAvailable: Union[int, None]
+    amountApprovedCredit: Union[int, None]
+    isApproved: Union[bool, None]
+    approvedById: Union[str, None]
+    approvedAt: Union[str, None]
+    updatedAt: Union[str, None]
+
+
 

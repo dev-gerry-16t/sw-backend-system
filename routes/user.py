@@ -13,6 +13,7 @@ box = "User Register V1"
 
 
 collection = db["user"]
+collection_profile = db["profile"]
 collection_screen = db["screen"]
 
 user = APIRouter()
@@ -36,7 +37,8 @@ def user_register(user: NewUser):
         "idBankAccounts": generate_UUID(),
         "idCarDocuments": generate_UUID(),
         "idLoans": generate_UUID(),
-        "registerAt": timestamp_formatted
+        "registerAt": timestamp_formatted,
+        "lastLoginAt": None
     }
     join_dict = {**new_user,**new_dict}
 
@@ -46,13 +48,15 @@ def user_register(user: NewUser):
     except errors.DuplicateKeyError as e:
         raise HTTPException(status_code=400, detail={"dbMessage":str(e),"errorMessage":"El correo o numero de celular ya esta en uso"})
 
-@user.post('/api/v1/user/login',response_model=ResponseLogin,tags=[box])
+@user.post('/api/v1/user/login',tags=[box])
 def user_login(user: Login):
     timestamp = datetime.now()
     timestamp_formatted = timestamp.strftime("%Y-%m-%d %H:%M:%S")
 
     user_form = dict(user)
     user_db= collection.find_one({"email": user_form["email"]})
+    user_profile = collection_profile.find_one({"idSystemUser": user_db["idSystemUser"]},{"_id":0,"idProfile":0,"idSystemUser":0})
+
     collection.update_one({"_id": user_db["_id"]}, {"$set": {"lastLoginAt": timestamp_formatted}}, upsert=True)
     
     if not password_verify(user_form["password"], user_db["password"]):
@@ -61,7 +65,8 @@ def user_login(user: Login):
     token = create_access_token(user_form["email"])
     path_user = collection_screen.find_one({"screenNumber": user_db["screenNumber"]})
 
-    join_dict = {**user_db, "token": token,"path": path_user["path"]}   
+    join_dict = {**user_db, "token": token,"path": path_user["path"], "profileInformation": user_profile["profileInformation"]}
+    
     return  userLoginEntity(join_dict)
 
 @user.get('/api/v1/user/progress/{idSystemUser}',response_model=ResponseProgress,tags=[box])

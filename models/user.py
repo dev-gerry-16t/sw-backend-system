@@ -1,4 +1,5 @@
 from pydantic import BaseModel
+from typing import Union
 
 class SetUser(BaseModel):
     idSystemUser: str
@@ -55,6 +56,6 @@ class ResponseLogin(BaseModel):
     idPersonalDocuments:str;
     idProfile:str;
     idBankAccounts:str;
-    lastLoginAt:str;
+    lastLoginAt: Union[str, None];
     path:str;
     token: str
