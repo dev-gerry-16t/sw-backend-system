@@ -7,7 +7,7 @@ profileRouter = APIRouter()
 
 tags_metadata = ["Profile V1"]
 
-collection_profile_information = db["profile"]
+collection_profile_information = db["profiles"]
 
 @profileRouter.post("/api/v1/profile/create", response_model= ResponseNewProfile ,tags = tags_metadata)
 def create_profile_information(profileBody: SetNewProfile):

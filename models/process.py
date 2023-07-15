@@ -4,6 +4,7 @@ from typing import Optional, List, Union
 class SetNewProcess(BaseModel):
     idCarInformation: str
     idCarDocuments: str
+    idPersonalDocuments: str
     idLoans: str
     idProcesses: Optional[str]
     idSystemUser: str
@@ -42,6 +43,7 @@ class ResponseProcessById(BaseModel):
     updatedAt: Union[str, None]
     idLoans: str
     idCarDocuments: str
+    idPersonalDocuments: str
     idCarInformation: str    
 
 class ListAddress(BaseModel):

@@ -11,14 +11,16 @@ process = APIRouter()
 tags_metadata = ["Process V1"]
 
 collection_process = db["process"]
-collection_profile = db["profile"]
-collection_user = db["user"]
+collection_profile = db["profiles"]
+collection_user = db["customers"]
 collection_car_info = db["carInformation"]
-collection_bank_info = db["bank"]
+collection_bank_info = db["banks"]
 
 @process.post("/api/v1/process/create", response_model= ResponseNewProcess ,tags = tags_metadata)
 def create_process(process: SetNewProcess):
     request_process = dict(process)
+
+    email = Email()
 
     timestamp = datetime.now()
     timestamp_formatted = timestamp.strftime("%Y-%m-%d %H:%M:%S")
@@ -37,6 +39,7 @@ def create_process(process: SetNewProcess):
         "updatedAt": None,
         "idLoans": request_process["idLoans"],
         "idCarDocuments": request_process["idCarDocuments"],
+        "idPersonalDocuments": request_process["idPersonalDocuments"],
         "idCarInformation": request_process["idCarInformation"],
     }
 
@@ -55,6 +58,19 @@ def create_process(process: SetNewProcess):
             "idSystemUser": request_process["idSystemUser"],
             "process":[new_process]}
             )
+    
+    template_name="SW_REQUESTCREDIT_V1"
+    email_to = "gerardoaldair@hotmail.com"
+    email_from = "Swip <no-reply@info.swip.mx>"
+    template_data = {
+        "idProcesses": request_process["idProcesses"],
+            }
+    email.send_email_template(
+        template_name = template_name,
+        email_to = email_to,
+        email_from = email_from,
+        template_data = template_data
+    )
     
     return processResponseEntity(id_process=id_process, id_processes=  request_process["idProcesses"],id_system_user= request_process["idSystemUser"]);
 
@@ -150,8 +166,8 @@ def update_process_by_id(idProcess: str, process: RequestUpdateProcessById):
     profile_name = collection_profile.find_one({"idSystemUser": id_system_user}).get("profileInformation", {}).get("name")
 
     template_name=""
-    email_to = user_info["email"]
-    email_from = "no-reply@info.swip.mx"
+    email_to = "gerardoaldair@hotmail.com"
+    email_from = "Swip <no-reply@info.swip.mx>"
     template_data = {}
 
     if request_process["idStatus"] == 2:

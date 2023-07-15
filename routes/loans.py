@@ -70,8 +70,8 @@ def create_loan(loanBody: SetNewLoans):
     collection_process.find_one_and_update(filter_query , new_values)
 
     template_name="SW_REQUESTLOAN_V1"
-    email_to = "gerardocto@swip.mx"
-    email_from = "no-reply@info.swip.mx"
+    email_to = "gerardoaldair@hotmail.com"
+    email_from = "Swip <no-reply@info.swip.mx>"
     template_data = {
         "idProcesses": request_loan["idProcesses"],
             }
@@ -87,8 +87,13 @@ def create_loan(loanBody: SetNewLoans):
 @loanRouter.get("/api/v1/loan/getAll/{idSystemUser}", tags = tags_metadata)
 def get_all_loans(idSystemUser: str):
 
-    loans_response= collection_loan.find_one({"idSystemUser": idSystemUser})["loans"]
-    
-    return {
-        "data": loans_response
-    }
+    loans_response= collection_loan.find_one({"idSystemUser": idSystemUser})
+    if loans_response is not None:
+        loans_response = loans_response["loans"]    
+        return {
+            "data": loans_response
+        }
+    else:
+        return {
+            "data": []
+        }

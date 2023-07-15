@@ -8,7 +8,7 @@ bankRouter = APIRouter()
 
 tags_metadata = ["Bank V1"]
 
-collection_bank_information = db["bank"]
+collection_bank_information = db["banks"]
 
 @bankRouter.post("/api/v1/bank/create", response_model= ResponseNewBank ,tags = tags_metadata)
 def create_bank_information(bankBody: SetNewBank):

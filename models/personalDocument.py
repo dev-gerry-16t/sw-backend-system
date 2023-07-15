@@ -1,10 +1,10 @@
-from typing import List
+from typing import List, Optional
 from pydantic import BaseModel
 
 class Screen(BaseModel):
     idScreen: str
-    path: str
-    nextPath: str
+    path: Optional[str]
+    nextPath: Optional[str]
     idDocumentType: str
     name: str
     description: str
@@ -13,6 +13,7 @@ class Screen(BaseModel):
     accept: str
     label: str
     bucketSource: str
+    index: int
 
 class ResponseModelScreen(BaseModel):
     screens: List[Screen]

@@ -12,9 +12,9 @@ from pymongo import errors
 box = "User Register V1"
 
 
-collection = db["user"]
-collection_profile = db["profile"]
-collection_screen = db["screen"]
+collection = db["customers"]
+collection_profile = db["profiles"]
+collection_screen = db["screens"]
 
 user = APIRouter()
 
@@ -69,6 +69,25 @@ def user_login(user: Login):
     
     return  userLoginEntity(join_dict)
 
+@user.get('/api/v1/user/getLogin/{idSystemUser}',tags=[box])
+def user_get_login(idSystemUser: str):
+    id_system_user= idSystemUser
+    timestamp = datetime.now()
+    timestamp_formatted = timestamp.strftime("%Y-%m-%d %H:%M:%S")
+
+    user_db= collection.find_one({"idSystemUser": id_system_user})
+    user_profile = collection_profile.find_one({"idSystemUser": id_system_user},{"_id":0,"idProfile":0,"idSystemUser":0})
+
+    collection.update_one({"_id": user_db["_id"]}, {"$set": {"lastLoginAt": timestamp_formatted}}, upsert=True)
+
+
+    token = create_access_token(user_db["email"])
+    path_user = collection_screen.find_one({"screenNumber": user_db["screenNumber"]})
+
+    join_dict = {**user_db, "token": token,"path": path_user["path"], "profileInformation": user_profile["profileInformation"]}
+    
+    return  userLoginEntity(join_dict)
+
 @user.get('/api/v1/user/progress/{idSystemUser}',response_model=ResponseProgress,tags=[box])
 def user_progress(idSystemUser: str, screen:str = Query(None) ):
      int_screen_number= int(screen)
@@ -76,7 +95,6 @@ def user_progress(idSystemUser: str, screen:str = Query(None) ):
      list_screen= list(collection_screen.find({}))
 
      for screen in list_screen:
-         print(screen)
          if screen["screenNumber"] == int_screen_number:
                 int_index= screen["index"] + 1
                 next_screen_dict= collection_screen.find_one({"index": int_index})
