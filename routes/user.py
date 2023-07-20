@@ -20,13 +20,13 @@ user = APIRouter()
 
 
 @user.post('/api/v1/user/register',response_model=ResponseNewUser,tags=[box])
-def user_register(user: NewUser):
+def user_register(request: NewUser):
     timestamp = datetime.now()
     timestamp_formatted = timestamp.strftime("%Y-%m-%d %H:%M:%S")
 
     collection.create_index("email", unique=True)
     collection.create_index("phoneNumber", unique=True)
-    new_user = dict(user)
+    new_user = dict(request)
     new_user["password"] = password_encrypt(new_user["password"])
     new_dict = {
         "idSystemUser": generate_UUID(),
@@ -35,7 +35,6 @@ def user_register(user: NewUser):
         "idPersonalDocuments": generate_UUID(),
         "idProfile": generate_UUID(),
         "idBankAccounts": generate_UUID(),
-        "idCarDocuments": generate_UUID(),
         "idLoans": generate_UUID(),
         "registerAt": timestamp_formatted,
         "lastLoginAt": None

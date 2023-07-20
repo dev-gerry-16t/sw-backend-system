@@ -32,7 +32,6 @@ class ResponseAllProcess(BaseModel):
 class ResponseProcessById(BaseModel):
     idProcesses: str
     idSystemUser: str
-    idProcess: str
     idStatus: int
     amountAvailable: int
     amountApprovedCredit: int
@@ -42,9 +41,10 @@ class ResponseProcessById(BaseModel):
     createdAt: str
     updatedAt: Union[str, None]
     idLoans: str
-    idCarDocuments: str
     idPersonalDocuments: str
-    idCarInformation: str    
+    tax: float
+    interestRate: float
+
 
 class ListAddress(BaseModel):
     street: str
@@ -73,7 +73,7 @@ class ResponseGetCarInfo(BaseModel):
     year: str
     mileage: str
     amountPrice: int
-    plateState: str
+    numberPlates: str
 
 class ResponseGetBankInfo(BaseModel):
     idBankAccount: str

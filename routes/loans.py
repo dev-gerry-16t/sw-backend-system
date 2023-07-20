@@ -32,8 +32,6 @@ def create_loan(loanBody: SetNewLoans):
         "nextPaymentAt": request_loan["nextPaymentAt"],
         "idStatus": 1,
         "approvedAt": None,
-        "tax": 0.16,
-        "interestRate": 0.04,
         "amountMoratorium": 0,
         "approvedById": None,
         "isLiquidated": False,
@@ -45,13 +43,13 @@ def create_loan(loanBody: SetNewLoans):
     collection_loan.create_index("idLoans", unique=True)
 
     existing_loans = collection_loan.find_one({"idSystemUser": request_loan["idSystemUser"]})
-    filter_query = {"idSystemUser":request_loan["idSystemUser"],"process.idProcess": request_loan["idProcess"]}
+    # filter_query = {"idSystemUser":request_loan["idSystemUser"],"process.idProcess": request_loan["idProcess"]}
     
-    limit_amount_available= collection_process.find_one(filter_query)["process"][0]["amountAvailable"]
+    limit_amount_available= collection_process.find_one({"idSystemUser":request_loan["idSystemUser"]})["amountAvailable"]
 
     new_values = {"$set": {
-        "process.$.idStatus": 1,
-        "process.$.amountAvailable": limit_amount_available - request_loan["amountLoan"],
+        "idStatus": 1,
+        "amountAvailable": limit_amount_available - request_loan["amountLoan"],
     }}
 
     
@@ -67,7 +65,7 @@ def create_loan(loanBody: SetNewLoans):
             "loans":[new_loan]}
             )
         
-    collection_process.find_one_and_update(filter_query , new_values)
+    collection_process.find_one_and_update({"idSystemUser":request_loan["idSystemUser"]} , new_values)
 
     template_name="SW_REQUESTLOAN_V1"
     email_to = "gerardoaldair@hotmail.com"

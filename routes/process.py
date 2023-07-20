@@ -20,8 +20,6 @@ collection_bank_info = db["banks"]
 def create_process(process: SetNewProcess):
     request_process = dict(process)
 
-    email = Email()
-
     timestamp = datetime.now()
     timestamp_formatted = timestamp.strftime("%Y-%m-%d %H:%M:%S")
 
@@ -29,17 +27,9 @@ def create_process(process: SetNewProcess):
 
     new_process = {
         "idProcess": id_process,
-        "idStatus": 1,
-        "amountAvailable": 0,
-        "amountApprovedCredit": 0,
-        "isApproved": False,
-        "approvedById": None,
-        "approvedAt": None,
         "createdAt": timestamp_formatted,
         "updatedAt": None,
-        "idLoans": request_process["idLoans"],
         "idCarDocuments": request_process["idCarDocuments"],
-        "idPersonalDocuments": request_process["idPersonalDocuments"],
         "idCarInformation": request_process["idCarInformation"],
     }
 
@@ -55,15 +45,35 @@ def create_process(process: SetNewProcess):
     else:
         collection_process.insert_one(
             {"idProcesses": request_process["idProcesses"],
+            "idPersonalDocuments": request_process["idPersonalDocuments"],
+            "idStatus": 1,
+            "amountAvailable": 0,
+            "amountApprovedCredit": 0,
+            "isApproved": False,
+            "approvedById": None,
+            "approvedAt": None,
+            "createdAt": timestamp_formatted,
+            "updatedAt": None,
+            "tax": 0.16,
+            "interestRate": 0.04,
             "idSystemUser": request_process["idSystemUser"],
+            "idLoans": request_process["idLoans"],
             "process":[new_process]}
             )
     
+    return processResponseEntity(id_process=id_process, id_processes=  request_process["idProcesses"],id_system_user= request_process["idSystemUser"]);
+
+@process.post("/api/v1/process/infoCreate", tags = tags_metadata)
+def info_create_process(request: dict):
+    request_info = dict(request)
+
+    email = Email()
+
     template_name="SW_REQUESTCREDIT_V1"
     email_to = "gerardoaldair@hotmail.com"
     email_from = "Swip <no-reply@info.swip.mx>"
     template_data = {
-        "idProcesses": request_process["idProcesses"],
+        "idProcesses": request_info["idProcesses"],
             }
     email.send_email_template(
         template_name = template_name,
@@ -71,8 +81,9 @@ def create_process(process: SetNewProcess):
         email_from = email_from,
         template_data = template_data
     )
-    
-    return processResponseEntity(id_process=id_process, id_processes=  request_process["idProcesses"],id_system_user= request_process["idSystemUser"]);
+
+    return { "message": "Ok" }
+
 
 @process.get("/api/v1/process/getAll", response_model= ResponseAllProcess ,tags = tags_metadata)
 def get_all_process():
@@ -81,18 +92,17 @@ def get_all_process():
     processes_db = collection_process.find()
 
     for proc in processes_db:
-        process_main = dict(proc["process"][0])
+        process_main = list(proc["process"])
         name_user = collection_profile.find_one({"idSystemUser": proc["idSystemUser"]})
         process_object = {
             "idProcesses": proc["idProcesses"],
-            "idProcess": process_main["idProcess"],
             "idSystemUser": proc["idSystemUser"],
             "name": name_user.get("profileInformation",{}).get("name"),
-            "createdAt": process_main["createdAt"],
-            "idStatus": process_main["idStatus"],
-            "processes": 1,
-            "amountApprovedCredit": process_main["amountApprovedCredit"],
-            "approvedAt": process_main["approvedAt"],
+            "createdAt": proc["createdAt"],
+            "idStatus": proc["idStatus"],
+            "processes": len(process_main),
+            "amountApprovedCredit": proc["amountApprovedCredit"],
+            "approvedAt": proc["approvedAt"],
             "loansRequested": 0,
         }
         processes_list.append(process_object)
@@ -105,7 +115,7 @@ def get_all_process():
 def get_process_by_id(id: str):
     processes_db = collection_process.find_one({"idProcesses": id})
     id_system_user = processes_db.get("idSystemUser",None)
-    process_main = dict(processes_db.get("process",[])[0])
+    process_main = dict(processes_db)
 
     object_response = {
         "idProcesses": id,
@@ -198,6 +208,61 @@ def update_process_by_id(idProcess: str, process: RequestUpdateProcessById):
     return {
         "message": "Process updated successfully"
     }
+
+@process.put("/api/v1/process/updateByIdProcesses/{idProcesses}",tags = tags_metadata)
+def update_process_by_id(idProcesses: str, process: RequestUpdateProcessById):
+    request_process = dict(process)
+    id_system_user = request_process["idSystemUser"]
+    
+    email = Email()
+
+    filter_query = {"idSystemUser":id_system_user,"process.idProcess": idProcesses}
+
+    new_values = {"$set": {}}
+
+    for key, value in request_process.items():
+        if key not in ["idProcess", "idSystemUser", "amountApprovedCreditFormatted"]:
+            field = f"process.$.{key.replace('_', '')}"
+            new_values["$set"][field] = value
+
+    collection_process.find_one_and_update(filter_query, new_values)
+    user_info = dict(collection_user.find_one({"idSystemUser": id_system_user},{"email":1}))
+    profile_name = collection_profile.find_one({"idSystemUser": id_system_user}).get("profileInformation", {}).get("name")
+
+    template_name=""
+    email_to = "gerardoaldair@hotmail.com"
+    email_from = "Swip <no-reply@info.swip.mx>"
+    template_data = {}
+
+    if request_process["idStatus"] == 2:
+        template_name="SW_APPROVEDCREDIT_V2"
+        template_data = {
+            "user": profile_name,
+            "amountApprovedCredit":f'{request_process["amountApprovedCreditFormatted"]} MXN',
+             }
+        email.send_email_template(
+            template_name = template_name,
+            email_to = email_to,
+            email_from = email_from,
+            template_data = template_data
+        )
+    elif request_process["idStatus"] == 3:
+        template_name="SW_REJECTEDCREDIT_V1"
+        template_data = {
+            "user": profile_name,
+             }
+        email.send_email_template(
+            template_name = template_name,
+            email_to = email_to,
+            email_from = email_from,
+            template_data = template_data
+        )
+
+
+    return {
+        "message": "Process updated successfully"
+    }
+
 
 
 

@@ -49,12 +49,12 @@ async def upload_file(file: UploadFile = File(...),
     contents = await file.read()
 
     
-    s3_object.upload_file(
-        file_name = id_document,
-        bucket_name = data_json["bucketSource"],
-        file_content = contents,
-        meta_data = meta_data
-    )
+    # s3_object.upload_file(
+    #     file_name = id_document,
+    #     bucket_name = data_json["bucketSource"],
+    #     file_content = contents,
+    #     meta_data = meta_data
+    # )
  
 
 
@@ -89,13 +89,13 @@ async def upload_file(file: UploadFile = File(...),
                 )
             
     elif id_flow_document == 1:
-        collection_car_document.create_index("idSystemUser", unique=True)
+        collection_car_document.create_index("idCarDocuments", unique=True)
 
-        existing_document = collection_car_document.find_one({"idSystemUser": data_json["idSystemUser"]})
+        existing_document = collection_car_document.find_one({"idCarDocuments": data_json["idCarDocuments"]})
 
         if existing_document:
             collection_car_document.update_one(
-                {"idSystemUser": data_json["idSystemUser"]}, 
+                {"idCarDocuments": data_json["idCarDocuments"]}, 
                 {"$addToSet":{"carDocuments":new_document}}
                 )
         else:

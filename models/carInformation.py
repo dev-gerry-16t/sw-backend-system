@@ -10,7 +10,8 @@ class SetCarInformation(BaseModel):
     year: str
     mileage: str
     amountPrice: int
-    plateState: str
+    numberPlates: str
+    isInsured: bool
 
 class ResponseNewCarInformation(BaseModel):
     idCarInformation: str

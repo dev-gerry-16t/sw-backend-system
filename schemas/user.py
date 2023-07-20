@@ -9,7 +9,6 @@ def userRegisterEntity(id, item) -> dict:
             "idBankAccounts":item["idBankAccounts"],
             "idUserType":item["idUserType"],
             "screenNumber":item["screenNumber"],
-            "idCarDocuments":item["idCarDocuments"],
             "idLoans":item["idLoans"],
 
     }
