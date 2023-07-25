@@ -49,12 +49,12 @@ async def upload_file(file: UploadFile = File(...),
     contents = await file.read()
 
     
-    # s3_object.upload_file(
-    #     file_name = id_document,
-    #     bucket_name = data_json["bucketSource"],
-    #     file_content = contents,
-    #     meta_data = meta_data
-    # )
+    s3_object.upload_file(
+        file_name = id_document,
+        bucket_name = data_json["bucketSource"],
+        file_content = contents,
+        meta_data = meta_data
+    )
  
 
 

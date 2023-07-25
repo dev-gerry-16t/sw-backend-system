@@ -15,6 +15,10 @@ collection_profile = db["profiles"]
 collection_user = db["customers"]
 collection_car_info = db["carInformation"]
 collection_bank_info = db["banks"]
+collection_car_docs = db["carDocuments"]
+
+collection_type_document = db["typeDocuments"]
+collection_repository_document = db["repositoryDocuments"]
 
 @process.post("/api/v1/process/create", response_model= ResponseNewProcess ,tags = tags_metadata)
 def create_process(process: SetNewProcess):
@@ -90,7 +94,6 @@ def get_all_process():
 
     processes_list = []
     processes_db = collection_process.find()
-
     for proc in processes_db:
         process_main = list(proc["process"])
         name_user = collection_profile.find_one({"idSystemUser": proc["idSystemUser"]})
@@ -114,13 +117,43 @@ def get_all_process():
 @process.get("/api/v1/process/getById/{id}", response_model= ResponseProcessById ,tags = tags_metadata)
 def get_process_by_id(id: str):
     processes_db = collection_process.find_one({"idProcesses": id})
+    process= processes_db.get("process",None)
     id_system_user = processes_db.get("idSystemUser",None)
+
+    process_list = []
+
+    calc_amount_credit= 0
+    for proc in process:
+        car_info= collection_car_info.find_one({"idCarInformation": proc["idCarInformation"]},{"_id":0,"idCarInformation":0,"idSystemUser":0})["information"]
+        car_docs= collection_car_docs.find_one({"idCarDocuments": proc["idCarDocuments"]},{"_id":0,"idCarDocuments":0,"idSystemUser":0})["carDocuments"]
+        calc_amount_credit += car_info["amountPrice"]
+        documents = []
+        for document in car_docs:
+            document_info = collection_repository_document.find_one({"idDocument": document["idDocument"]}, {"_id": 0})
+            document_type =  collection_type_document.find_one({"idDocumentType": document_info["idDocumentType"]}, {"_id": 0})
+            document_info["url"] = f"/api/v1/document/getDocument/{document_info['bucketSource']}/{document_info['idDocument']}"
+            document_info["name"] = document_type["name"]
+            documents.append(document_info)
+
+        new_object = {
+            **proc,
+            **car_info,
+            "documents": documents,
+        }
+
+        process_list.append(new_object)
+    if processes_db["idStatus"] == 1 or processes_db["idStatus"] == 2:
+        collection_process.update_one({"idProcesses": id}, {"$set":{"amountAvailable": calc_amount_credit, "amountApprovedCredit": calc_amount_credit}})
+        processes_db = collection_process.find_one({"idProcesses": id})
+
     process_main = dict(processes_db)
+
 
     object_response = {
         "idProcesses": id,
         "idSystemUser": id_system_user,
-        **process_main
+        **process_main,
+        "process": process_list,
     }
 
     return object_response
@@ -156,53 +189,23 @@ def get_personal_info(idSystemUser: str):
     return bank_info
 
 @process.put("/api/v1/process/updateById/{idProcess}",tags = tags_metadata)
-def update_process_by_id(idProcess: str, process: RequestUpdateProcessById):
+def update_process_by_id(idProcess: str, process: dict):
     request_process = dict(process)
-    id_system_user = request_process["idSystemUser"]
-    
-    email = Email()
+    id_processes = request_process["idProcesses"]
+    id_car_information = request_process["idCarInformation"]
 
-    filter_query = {"idSystemUser":id_system_user,"process.idProcess": idProcess}
+    update_processes = request_process["updatedAt"]
+
+    collection_process.find_one_and_update({"idProcesses":id_processes, "process.idProcess": idProcess}, {"$set":{"process.$.updatedAt": update_processes}})
 
     new_values = {"$set": {}}
-
     for key, value in request_process.items():
-        if key not in ["idProcess", "idSystemUser", "amountApprovedCreditFormatted"]:
-            field = f"process.$.{key.replace('_', '')}"
+        if key not in ["idProcess", "idSystemUser", "amountApprovedCreditFormatted", "updatedAt", "idCarInformation", "idProcesses","offset"]:
+            field = f"information.{key.replace('_', '')}"
             new_values["$set"][field] = value
+    
+    collection_car_info.update_one({"idCarInformation": id_car_information}, new_values)
 
-    collection_process.find_one_and_update(filter_query, new_values)
-    user_info = dict(collection_user.find_one({"idSystemUser": id_system_user},{"email":1}))
-    profile_name = collection_profile.find_one({"idSystemUser": id_system_user}).get("profileInformation", {}).get("name")
-
-    template_name=""
-    email_to = "gerardoaldair@hotmail.com"
-    email_from = "Swip <no-reply@info.swip.mx>"
-    template_data = {}
-
-    if request_process["idStatus"] == 2:
-        template_name="SW_APPROVEDCREDIT_V2"
-        template_data = {
-            "user": profile_name,
-            "amountApprovedCredit":f'{request_process["amountApprovedCreditFormatted"]} MXN',
-             }
-        email.send_email_template(
-            template_name = template_name,
-            email_to = email_to,
-            email_from = email_from,
-            template_data = template_data
-        )
-    elif request_process["idStatus"] == 3:
-        template_name="SW_REJECTEDCREDIT_V1"
-        template_data = {
-            "user": profile_name,
-             }
-        email.send_email_template(
-            template_name = template_name,
-            email_to = email_to,
-            email_from = email_from,
-            template_data = template_data
-        )
 
 
     return {
@@ -210,22 +213,22 @@ def update_process_by_id(idProcess: str, process: RequestUpdateProcessById):
     }
 
 @process.put("/api/v1/process/updateByIdProcesses/{idProcesses}",tags = tags_metadata)
-def update_process_by_id(idProcesses: str, process: RequestUpdateProcessById):
+def update_process_by_id(idProcesses: str, process: dict):
     request_process = dict(process)
     id_system_user = request_process["idSystemUser"]
     
     email = Email()
 
-    filter_query = {"idSystemUser":id_system_user,"process.idProcess": idProcesses}
+    filter_query = {"idProcesses":idProcesses}
 
     new_values = {"$set": {}}
 
     for key, value in request_process.items():
         if key not in ["idProcess", "idSystemUser", "amountApprovedCreditFormatted"]:
-            field = f"process.$.{key.replace('_', '')}"
+            field = key.replace('_', '')
             new_values["$set"][field] = value
 
-    collection_process.find_one_and_update(filter_query, new_values)
+    collection_process.update_one(filter_query, new_values)
     user_info = dict(collection_user.find_one({"idSystemUser": id_system_user},{"email":1}))
     profile_name = collection_profile.find_one({"idSystemUser": id_system_user}).get("profileInformation", {}).get("name")
 
@@ -234,7 +237,7 @@ def update_process_by_id(idProcesses: str, process: RequestUpdateProcessById):
     email_from = "Swip <no-reply@info.swip.mx>"
     template_data = {}
 
-    if request_process["idStatus"] == 2:
+    if request_process["idStatus"] == 3:
         template_name="SW_APPROVEDCREDIT_V2"
         template_data = {
             "user": profile_name,
@@ -246,7 +249,7 @@ def update_process_by_id(idProcesses: str, process: RequestUpdateProcessById):
             email_from = email_from,
             template_data = template_data
         )
-    elif request_process["idStatus"] == 3:
+    elif request_process["idStatus"] == 4:
         template_name="SW_REJECTEDCREDIT_V1"
         template_data = {
             "user": profile_name,

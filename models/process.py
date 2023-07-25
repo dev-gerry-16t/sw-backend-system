@@ -16,7 +16,6 @@ class ResponseNewProcess(BaseModel):
 
 class ObjectResponseAllProcess(BaseModel):
     idProcesses: str
-    idProcess: str
     idSystemUser: str
     name: str
     createdAt: str
@@ -44,6 +43,7 @@ class ResponseProcessById(BaseModel):
     idPersonalDocuments: str
     tax: float
     interestRate: float
+    process: list
 
 
 class ListAddress(BaseModel):

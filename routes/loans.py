@@ -48,7 +48,7 @@ def create_loan(loanBody: SetNewLoans):
     limit_amount_available= collection_process.find_one({"idSystemUser":request_loan["idSystemUser"]})["amountAvailable"]
 
     new_values = {"$set": {
-        "idStatus": 1,
+        "idStatus": 5,
         "amountAvailable": limit_amount_available - request_loan["amountLoan"],
     }}
 
@@ -65,7 +65,7 @@ def create_loan(loanBody: SetNewLoans):
             "loans":[new_loan]}
             )
         
-    collection_process.find_one_and_update({"idSystemUser":request_loan["idSystemUser"]} , new_values)
+    collection_process.update_one({"idSystemUser":request_loan["idSystemUser"]} , new_values)
 
     template_name="SW_REQUESTLOAN_V1"
     email_to = "gerardoaldair@hotmail.com"

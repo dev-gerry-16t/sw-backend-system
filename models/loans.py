@@ -1,10 +1,11 @@
 from pydantic import BaseModel
+from typing import Optional
 
 class SetNewLoans(BaseModel):
     idBankAccount: str
     idSystemUser: str
     idProcesses: str
-    idProcess: str
+    idProcess: Optional[str]
     idLoans: str
     requestedAt: str
     concept: str
@@ -14,6 +15,7 @@ class SetNewLoans(BaseModel):
     amountInterest: int
     amountPayOff: int
     nextPaymentAt: str
+    offset: Optional[str]
 
 class ResponseNewLoans(BaseModel):
     idLoan: str
