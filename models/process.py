@@ -44,6 +44,7 @@ class ResponseProcessById(BaseModel):
     tax: float
     interestRate: float
     process: list
+    appointmentDate: Union[str, None]
 
 
 class ListAddress(BaseModel):

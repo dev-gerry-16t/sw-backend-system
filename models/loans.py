@@ -7,6 +7,7 @@ class SetNewLoans(BaseModel):
     idProcesses: str
     idProcess: Optional[str]
     idLoans: str
+    idStatus: Optional[int]
     requestedAt: str
     concept: str
     amountMonthly: int

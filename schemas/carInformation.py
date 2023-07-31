@@ -19,6 +19,7 @@ def setCarInfoEntity(id, items)-> dict:
             "amountPrice":items["amountPrice"],
             "numberPlates":items["numberPlates"],
             "isInsured":items["isInsured"],
+            "amountAppraise":0,
             "amountInsured": 0,
         }
     }

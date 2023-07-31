@@ -10,6 +10,8 @@ tags_metadata = ["Loans V1"]
 
 collection_loan = db["loans"]
 collection_process = db["process"]
+collection_config = db["configs"]
+collection_car_info = db["carInformation"]
 
 @loanRouter.post("/api/v1/loan/create", response_model= ResponseNewLoans ,tags = tags_metadata)
 def create_loan(loanBody: SetNewLoans):
@@ -30,7 +32,7 @@ def create_loan(loanBody: SetNewLoans):
         "amountInterest": request_loan["amountInterest"],
         "amountPayOff": request_loan["amountPayOff"],
         "nextPaymentAt": request_loan["nextPaymentAt"],
-        "idStatus": 1,
+        "idStatus":  1 if request_loan["idStatus"] is None else request_loan["idStatus"],
         "approvedAt": None,
         "amountMoratorium": 0,
         "approvedById": None,
@@ -48,7 +50,7 @@ def create_loan(loanBody: SetNewLoans):
     limit_amount_available= collection_process.find_one({"idSystemUser":request_loan["idSystemUser"]})["amountAvailable"]
 
     new_values = {"$set": {
-        "idStatus": 5,
+        "idStatus": 5 if request_loan["idStatus"] is None else 1,
         "amountAvailable": limit_amount_available - request_loan["amountLoan"],
     }}
 
@@ -95,3 +97,31 @@ def get_all_loans(idSystemUser: str):
         return {
             "data": []
         }
+
+@loanRouter.get("/api/v1/loan/openingPrice/{idProcesses}", tags = tags_metadata)
+def get_opening_price(idProcesses: str):
+
+    process_car = collection_process.find_one({"idProcesses": idProcesses}).get("process", None)
+    config_info_gps = collection_config.find_one({}).get("gpsMonthly", 0)
+    number_of_units = len(process_car)
+    total_gps = number_of_units * config_info_gps
+
+    process_car_response = []
+
+    for car in process_car:
+        car_info = collection_car_info.find_one({"idCarInformation": car["idCarInformation"]}).get("information", {})
+        new_object= {
+            "brand": car_info["brand"],
+            "model": car_info["model"],
+            "year": car_info["year"],
+            "numberPlates": car_info["numberPlates"],
+            "gpsMonthly": config_info_gps,
+        }
+        process_car_response.append(new_object)
+
+    return {
+        "gpsMonthly": config_info_gps,
+        "numberOfUnits": number_of_units,
+        "totalGps": total_gps,
+        "description": process_car_response
+    }

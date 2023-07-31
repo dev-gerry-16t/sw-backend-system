@@ -5,7 +5,7 @@ from config.db import db
 from utils.generateUUID import generate_UUID
 from schemas.process import processResponseEntity
 from utils.email import Email
-
+from utils.selectTemplateEmail import select_template_email
 process = APIRouter()
 
 tags_metadata = ["Process V1"]
@@ -16,6 +16,7 @@ collection_user = db["customers"]
 collection_car_info = db["carInformation"]
 collection_bank_info = db["banks"]
 collection_car_docs = db["carDocuments"]
+collection_loan = db["loans"]
 
 collection_type_document = db["typeDocuments"]
 collection_repository_document = db["repositoryDocuments"]
@@ -62,6 +63,7 @@ def create_process(process: SetNewProcess):
             "interestRate": 0.04,
             "idSystemUser": request_process["idSystemUser"],
             "idLoans": request_process["idLoans"],
+            "appointmentDate": None,
             "process":[new_process]}
             )
     
@@ -119,6 +121,8 @@ def get_process_by_id(id: str):
     processes_db = collection_process.find_one({"idProcesses": id})
     process= processes_db.get("process",None)
     id_system_user = processes_db.get("idSystemUser",None)
+    loan_find_one = collection_loan.find_one({"idSystemUser": id_system_user})
+    loans_user=[] if loan_find_one is None else loan_find_one.get("loans",[])
 
     process_list = []
 
@@ -129,11 +133,12 @@ def get_process_by_id(id: str):
         calc_amount_credit += car_info["amountPrice"]
         documents = []
         for document in car_docs:
-            document_info = collection_repository_document.find_one({"idDocument": document["idDocument"]}, {"_id": 0})
-            document_type =  collection_type_document.find_one({"idDocumentType": document_info["idDocumentType"]}, {"_id": 0})
-            document_info["url"] = f"/api/v1/document/getDocument/{document_info['bucketSource']}/{document_info['idDocument']}"
-            document_info["name"] = document_type["name"]
-            documents.append(document_info)
+            document_info = collection_repository_document.find_one({"idDocument": document["idDocument"], "isActive": True}, {"_id": 0})
+            if document_info is not None:
+                document_type =  collection_type_document.find_one({"idDocumentType": document_info["idDocumentType"]}, {"_id": 0})
+                document_info["url"] = f"/api/v1/document/getDocument/{document_info['bucketSource']}/{document_info['idDocument']}"
+                document_info["name"] = document_type["name"]
+                documents.append(document_info)
 
         new_object = {
             **proc,
@@ -142,8 +147,13 @@ def get_process_by_id(id: str):
         }
 
         process_list.append(new_object)
+    
+    calc_amount_loans = 0
+    for loan in loans_user:
+        calc_amount_loans += loan["amountLoan"]
+
     if processes_db["idStatus"] == 1 or processes_db["idStatus"] == 2:
-        collection_process.update_one({"idProcesses": id}, {"$set":{"amountAvailable": calc_amount_credit, "amountApprovedCredit": calc_amount_credit}})
+        collection_process.update_one({"idProcesses": id}, {"$set":{"amountAvailable": calc_amount_credit - calc_amount_loans,"amountApprovedCredit": calc_amount_credit}})
         processes_db = collection_process.find_one({"idProcesses": id})
 
     process_main = dict(processes_db)
@@ -216,6 +226,8 @@ def update_process_by_id(idProcess: str, process: dict):
 def update_process_by_id(idProcesses: str, process: dict):
     request_process = dict(process)
     id_system_user = request_process["idSystemUser"]
+    id_status_process = request_process.get("idStatus", None)
+    id_template_email = request_process.get("idTemplateEmail", None)
     
     email = Email()
 
@@ -224,42 +236,34 @@ def update_process_by_id(idProcesses: str, process: dict):
     new_values = {"$set": {}}
 
     for key, value in request_process.items():
-        if key not in ["idProcess", "idSystemUser", "amountApprovedCreditFormatted"]:
+        if key not in ["idProcess", "idSystemUser", "amountApprovedCreditFormatted", "idTemplateEmail", "offset"]:
             field = key.replace('_', '')
             new_values["$set"][field] = value
 
     collection_process.update_one(filter_query, new_values)
-    user_info = dict(collection_user.find_one({"idSystemUser": id_system_user},{"email":1}))
     profile_name = collection_profile.find_one({"idSystemUser": id_system_user}).get("profileInformation", {}).get("name")
 
-    template_name=""
-    email_to = "gerardoaldair@hotmail.com"
-    email_from = "Swip <no-reply@info.swip.mx>"
-    template_data = {}
-
-    if request_process["idStatus"] == 3:
-        template_name="SW_APPROVEDCREDIT_V2"
-        template_data = {
-            "user": profile_name,
-            "amountApprovedCredit":f'{request_process["amountApprovedCreditFormatted"]} MXN',
-             }
-        email.send_email_template(
-            template_name = template_name,
-            email_to = email_to,
-            email_from = email_from,
-            template_data = template_data
-        )
-    elif request_process["idStatus"] == 4:
-        template_name="SW_REJECTEDCREDIT_V1"
-        template_data = {
-            "user": profile_name,
-             }
-        email.send_email_template(
-            template_name = template_name,
-            email_to = email_to,
-            email_from = email_from,
-            template_data = template_data
-        )
+   
+    if id_template_email == 2:
+        user_info = dict(collection_user.find_one({"idSystemUser": id_system_user},{"email":1}))
+        email_to = "gerardoaldair@hotmail.com"
+        select_template_email(
+            id_template_email, 
+            email_to = email_to, 
+            user = profile_name, 
+            amount_approved = f'{request_process["amountApprovedCreditFormatted"]} MXN'
+            )
+    # elif request_process["idStatus"] == 4:
+        # template_name="SW_REJECTEDCREDIT_V1"
+        # template_data = {
+        #     "user": profile_name,
+        #      }
+        # email.send_email_template(
+        #     template_name = template_name,
+        #     email_to = email_to,
+        #     email_from = email_from,
+        #     template_data = template_data
+        # )
 
 
     return {

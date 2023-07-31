@@ -61,6 +61,7 @@ async def upload_file(file: UploadFile = File(...),
     collection_repository_document.create_index("idDocument", unique=True)
     collection_repository_document.insert_one({
             "idDocument": id_document, 
+            "isActive": True,
             "documentName": data_json["name"],
             "bucketSource": data_json["bucketSource"],
             "idDocumentType": data_json["idDocumentType"],
@@ -186,11 +187,12 @@ def get_personal_by_id(idPersonalDocuments: str):
     documents = []
 
     for document in response_list_documents:
-        document_info = collection_repository_document.find_one({"idDocument": document["idDocument"]}, {"_id": 0})
-        document_type =  collection_type_document.find_one({"idDocumentType": document_info["idDocumentType"]}, {"_id": 0})
-        document_info["url"] = f"/api/v1/document/getDocument/{document_info['bucketSource']}/{document_info['idDocument']}"
-        document_info["name"] = document_type["name"]
-        documents.append(document_info)
+        document_info = collection_repository_document.find_one({"idDocument": document["idDocument"], "isActive": True}, {"_id": 0})
+        if document_info is not None:
+            document_type =  collection_type_document.find_one({"idDocumentType": document_info["idDocumentType"]}, {"_id": 0})
+            document_info["url"] = f"/api/v1/document/getDocument/{document_info['bucketSource']}/{document_info['idDocument']}"
+            document_info["name"] = document_type["name"]
+            documents.append(document_info)
 
     return {"data": documents}
 
@@ -203,13 +205,19 @@ def get_car_by_id(idCarDocuments: str):
     documents = []
 
     for document in response_list_documents:
-        document_info = collection_repository_document.find_one({"idDocument": document["idDocument"]}, {"_id": 0})
-        document_type =  collection_type_document.find_one({"idDocumentType": document_info["idDocumentType"]}, {"_id": 0})        
-        document_info["url"] = f"/api/v1/document/getDocument/{document_info['bucketSource']}/{document_info['idDocument']}"
-        document_info["name"] = document_type["name"]
-        documents.append(document_info)
+        document_info = collection_repository_document.find_one({"idDocument": document["idDocument"], "isActive": True}, {"_id": 0})
+        if document_info is not None:
+            document_type =  collection_type_document.find_one({"idDocumentType": document_info["idDocumentType"]}, {"_id": 0})        
+            document_info["url"] = f"/api/v1/document/getDocument/{document_info['bucketSource']}/{document_info['idDocument']}"
+            document_info["name"] = document_type["name"]
+            documents.append(document_info)
 
     return {"data": documents}
+
+@document.put("/api/v1/document/deactivateDocument/{idDocument}",tags = tags_metadata)
+def deactivate_document(idDocument: str):
+    collection_repository_document.update_one({"idDocument": idDocument}, {"$set":{"isActive": False}})
+    return {"message": "OK"}
 
     
         
