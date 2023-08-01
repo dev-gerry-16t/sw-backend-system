@@ -170,7 +170,7 @@ async def put_flow_screen_document(requestFlow: dict):
                     {"$set":{"index": doc["index"]}}
                     )
                 
-    return {"message": "OK"}
+    return {"message": "Ok"}
 
 @document.get("/api/v1/document/getDocument/{bucketSource}/{idDocument}",tags = tags_metadata)
 def get_document(bucketSource: str, idDocument: str):
