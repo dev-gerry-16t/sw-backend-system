@@ -1,0 +1,44 @@
+# Archivos y directorios específicos para Python y FastAPI
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.pyz
+*.pyw
+*.pyz/
+*.pyw/
+
+*/__pycache__/
+# Entornos virtuales (opcional, si los utilizas)
+venv/
+env/
+.pipenv/
+
+# Archivos y directorios de pruebas
+tests/
+test/
+*.test.*
+
+# Archivos y directorios generados por IDE o editores de texto
+.vscode/
+.idea/
+*.sublime*
+*.swp
+*.swo
+*~
+*.bak
+*.tmp
+
+# Archivos y directorios de control de versiones
+.git/
+.hg/
+.svn/
+
+# Otros archivos de configuración
+.DS_Store
+*.env
+*.log
+*.json
+*.yaml
+*.yml
+.github

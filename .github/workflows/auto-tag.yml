@@ -1,0 +1,39 @@
+name: Auto Tag
+
+on:
+  push:
+    branches:
+      - main  # Cambiar por la rama que desees monitorear
+
+jobs:
+  tag:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Get latest tag
+        run: git fetch --tags --depth=1
+
+      - name: Determine new tag version
+        id: determine_tag
+        run: |
+          # Obtenemos el último tag existente
+          LAST_TAG=$(git describe --tags --abbrev=0)
+          # Separamos la versión del tag
+          LAST_VERSION=${LAST_TAG:1}
+
+          # Incrementamos la versión en el formato "X.X.X"
+          IFS='.' read -r -a VERSION_PARTS <<< "$LAST_VERSION"
+          # NEW_VERSION="${VERSION_PARTS[0]}.$((VERSION_PARTS[1]+1)).0"
+          NEW_VERSION="${VERSION_PARTS[0]}.${VERSION_PARTS[1]}.$((VERSION_PARTS[2]+1))"
+
+          # Creamos el nuevo tag
+          NEW_TAG="v${NEW_VERSION}"
+          echo ::set-output name=NEW_TAG::$NEW_TAG
+
+      - name: Create and push new tag
+        if: ${{ steps.determine_tag.outputs.NEW_TAG != '' }}
+        run: |
+          git tag ${{ steps.determine_tag.outputs.NEW_TAG }}
