@@ -1,6 +1,7 @@
 from utils.email import Email
 
 def select_template_email(id_template, **options):
+    
     email = Email()
     email_from = "Swip <no-reply@info.swip.mx>"
     email_to_admins = "gerardocto@swip.mx"
