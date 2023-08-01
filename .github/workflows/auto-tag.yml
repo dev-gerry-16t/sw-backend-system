@@ -17,23 +17,23 @@ jobs:
         id: get_latest_tag
         run: |
           LATEST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
-          echo ::set-output name=TAG::$LATEST_TAG
+          echo "TAG=${LATEST_TAG}" >> $GITHUB_ENV
 
       - name: Determine new tag version
         id: determine_tag
         run: |
           # Obtenemos el último tag existente
-          LAST_TAG=${{ steps.get_latest_tag.outputs.TAG }}
+          LAST_TAG=${{ env.TAG }}
 
           # Incrementamos la versión en el formato "vX.X.X"
           IFS='.' read -r -a VERSION_PARTS <<< "${LAST_TAG:1}"
           NEW_VERSION="v${VERSION_PARTS[0]}.${VERSION_PARTS[1]}.$((VERSION_PARTS[2]+1))"
 
           # Creamos el nuevo tag
-          echo ::set-output name=NEW_TAG::$NEW_VERSION
+          echo "NEW_TAG=${NEW_VERSION}" >> $GITHUB_ENV
 
       - name: Create and push new tag
-        if: ${{ steps.determine_tag.outputs.NEW_TAG != '' }}
+        if: ${{ env.NEW_TAG != '' }}
         run: |
-          git tag ${{ steps.determine_tag.outputs.NEW_TAG }}
-          git push origin ${{ steps.determine_tag.outputs.NEW_TAG }}
+          git tag ${{ env.NEW_TAG }}
+          git push origin ${{ env.NEW_TAG }}
