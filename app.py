@@ -11,11 +11,14 @@ from routes.loans import loanRouter
 
 app = FastAPI()
 
+# origins = [
+#     "http://localhost",
+#     "http://localhost:5173",
+#     "http://localhost:3000",
+#     "http://localhost:8000",
+# ]
 origins = [
-    "http://localhost",
-    "http://localhost:5173",
-    "http://localhost:3000",
-    "http://localhost:8000",
+    "*",
 ]
 
 app.add_middleware(
@@ -25,6 +28,19 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.get("/health", tags=["health"])
+async def health_check():
+    # Aquí puedes incluir cualquier lógica adicional para verificar el estado de tu aplicación
+    # Por ejemplo, puedes comprobar conexiones a bases de datos, servicios externos, etc.
+
+    # Si todo está bien, devolvemos un mensaje de éxito
+
+    return {"status": "ok"}
+
+@app.get("/", tags=["root"])
+async def read_root():
+    return {"message": "ok"}
 
 app.include_router(user)
 app.include_router(document)

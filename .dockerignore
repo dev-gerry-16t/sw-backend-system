@@ -36,6 +36,7 @@ test/
 
 # Otros archivos de configuración
 .DS_Store
+.env
 *.env
 *.log
 *.json
