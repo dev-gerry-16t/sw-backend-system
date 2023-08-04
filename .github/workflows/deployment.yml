@@ -2,7 +2,7 @@ name: Build and  Push Python Image to AWS ECR
 on:
   push:
     branches:
-      - [ main ]
+      - main 
 jobs:
   build-and-push:
     name: Build and Push to ECR
