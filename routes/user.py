@@ -1,4 +1,3 @@
-from datetime import datetime
 from fastapi import APIRouter, HTTPException, Query
 from config.db import db
 from schemas.user import userRegisterEntity, userLoginEntity
@@ -8,6 +7,7 @@ from utils.token import create_access_token
 from utils.generateUUID import generate_UUID
 from dotenv import load_dotenv
 from pymongo import errors
+from utils.formatDate import FormatDate
 
 box = "User Register V1"
 
@@ -21,8 +21,8 @@ user = APIRouter()
 
 @user.post('/api/v1/user/register',response_model=ResponseNewUser,tags=[box])
 def user_register(request: NewUser):
-    timestamp = datetime.now()
-    timestamp_formatted = timestamp.strftime("%Y-%m-%d %H:%M:%S")
+    format_iso= FormatDate()
+
 
     collection.create_index("email", unique=True)
     collection.create_index("phoneNumber", unique=True)
@@ -36,7 +36,7 @@ def user_register(request: NewUser):
         "idProfile": generate_UUID(),
         "idBankAccounts": generate_UUID(),
         "idLoans": generate_UUID(),
-        "registerAt": timestamp_formatted,
+        "registerAt": format_iso.timezone_cdmx(),
         "lastLoginAt": None
     }
     join_dict = {**new_user,**new_dict}
@@ -49,14 +49,13 @@ def user_register(request: NewUser):
 
 @user.post('/api/v1/user/login',tags=[box])
 def user_login(user: Login):
-    timestamp = datetime.now()
-    timestamp_formatted = timestamp.strftime("%Y-%m-%d %H:%M:%S")
+    format_iso= FormatDate()
 
     user_form = dict(user)
     user_db= collection.find_one({"email": user_form["email"]})
     user_profile = collection_profile.find_one({"idSystemUser": user_db["idSystemUser"]},{"_id":0,"idProfile":0,"idSystemUser":0})
 
-    collection.update_one({"_id": user_db["_id"]}, {"$set": {"lastLoginAt": timestamp_formatted}}, upsert=True)
+    collection.update_one({"_id": user_db["_id"]}, {"$set": {"lastLoginAt": format_iso.timezone_cdmx()}}, upsert=True)
     
     if not password_verify(user_form["password"], user_db["password"]):
         raise HTTPException(status_code=401, detail={"dbMessage":"","errorMessage":"Verifique su correo o contraseña"})
@@ -71,13 +70,12 @@ def user_login(user: Login):
 @user.get('/api/v1/user/getLogin/{idSystemUser}',tags=[box])
 def user_get_login(idSystemUser: str):
     id_system_user= idSystemUser
-    timestamp = datetime.now()
-    timestamp_formatted = timestamp.strftime("%Y-%m-%d %H:%M:%S")
+    format_iso= FormatDate()
 
     user_db= collection.find_one({"idSystemUser": id_system_user})
     user_profile = collection_profile.find_one({"idSystemUser": id_system_user},{"_id":0,"idProfile":0,"idSystemUser":0})
 
-    collection.update_one({"_id": user_db["_id"]}, {"$set": {"lastLoginAt": timestamp_formatted}}, upsert=True)
+    collection.update_one({"_id": user_db["_id"]}, {"$set": {"lastLoginAt": format_iso.timezone_cdmx()}}, upsert=True)
 
 
     token = create_access_token(user_db["email"])

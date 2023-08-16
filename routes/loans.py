@@ -3,6 +3,8 @@ from config.db import db
 from models.loans import SetNewLoans, ResponseNewLoans
 from utils.generateUUID import generate_UUID
 from utils.email import Email
+from utils.selectTemplateEmail import select_template_email
+from utils.formatDate import FormatDate
 
 loanRouter = APIRouter()
 
@@ -15,24 +17,32 @@ collection_car_info = db["carInformation"]
 
 @loanRouter.post("/api/v1/loan/create", response_model= ResponseNewLoans ,tags = tags_metadata)
 def create_loan(loanBody: SetNewLoans):
+    format_iso= FormatDate()
+
     request_loan = dict(loanBody)
 
-    email = Email()
-
     id_loan= generate_UUID()
+
+    date_now = format_iso.timezone_cdmx()
+
+    id_loan_type =  0 if request_loan["idLoanType"] is None else request_loan["idLoanType"]
+
+    total_payments = 1 if request_loan["idLoanType"] is None else 12
 
     new_loan = {
         "idLoan": id_loan,
         "idBankAccount": request_loan["idBankAccount"],
-        "requestedAt": request_loan["requestedAt"],
+        "requestedAt": date_now,
         "concept": request_loan["concept"],
         "amountMonthly":request_loan["amountMonthly"],
         "amountLoan": request_loan["amountLoan"],
         "amountIva": request_loan["amountIva"],
         "amountInterest": request_loan["amountInterest"],
         "amountPayOff": request_loan["amountPayOff"],
-        "nextPaymentAt": request_loan["nextPaymentAt"],
+        "nextPaymentAt": format_iso.add_single_month(date_now),
         "idStatus":  1 if request_loan["idStatus"] is None else request_loan["idStatus"],
+        "idLoanType": id_loan_type,
+        "totalPayments": total_payments,
         "approvedAt": None,
         "amountMoratorium": 0,
         "approvedById": None,
@@ -51,7 +61,7 @@ def create_loan(loanBody: SetNewLoans):
 
     new_values = {"$set": {
         "idStatus": 5 if request_loan["idStatus"] is None else 1,
-        "amountAvailable": limit_amount_available - request_loan["amountLoan"],
+        "amountAvailable": limit_amount_available - (request_loan["amountLoan"] * total_payments),
     }}
 
     
@@ -69,17 +79,9 @@ def create_loan(loanBody: SetNewLoans):
         
     collection_process.update_one({"idSystemUser":request_loan["idSystemUser"]} , new_values)
 
-    template_name="SW_REQUESTLOAN_V1"
-    email_to = "gerardoaldair@hotmail.com"
-    email_from = "Swip <no-reply@info.swip.mx>"
-    template_data = {
-        "idProcesses": request_loan["idProcesses"],
-            }
-    email.send_email_template(
-        template_name = template_name,
-        email_to = email_to,
-        email_from = email_from,
-        template_data = template_data
+    select_template_email(
+        id_template= 4,
+        id_processes= request_loan["idProcesses"],
     )
 
     return {"idLoan": id_loan, "idSystemUser": request_loan["idSystemUser"]}
@@ -124,4 +126,25 @@ def get_opening_price(idProcesses: str):
         "numberOfUnits": number_of_units,
         "totalGps": total_gps,
         "description": process_car_response
+    }
+
+@loanRouter.get("/api/v1/loan/getNextPayments/{idSystemUser}", tags = tags_metadata)
+def get_next_payments(idSystemUser: str):
+    format_iso= FormatDate()
+
+    loan_by_id = collection_loan.find_one({"idSystemUser": idSystemUser}, {"loans": 1, "_id": 0})
+    loan_list = loan_by_id["loans"]
+
+    list_next_to_pay = []
+
+    for loan in loan_list:
+        if loan["isLiquidated"] == False:
+            # diff_days = format_iso.diff_dates_since_now(loan["nextPaymentAt"])
+            # if diff_days <= 30:
+            list_next_to_pay.append(loan)
+
+
+
+    return {
+        "data": list_next_to_pay
     }

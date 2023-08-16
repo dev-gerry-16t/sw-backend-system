@@ -5,17 +5,16 @@ class SetNewLoans(BaseModel):
     idBankAccount: str
     idSystemUser: str
     idProcesses: str
+    idLoanType: Optional[int]
     idProcess: Optional[str]
     idLoans: str
     idStatus: Optional[int]
-    requestedAt: str
     concept: str
     amountMonthly: int
     amountLoan: int
     amountIva: int
     amountInterest: int
     amountPayOff: int
-    nextPaymentAt: str
     offset: Optional[str]
 
 class ResponseNewLoans(BaseModel):

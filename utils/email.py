@@ -28,6 +28,23 @@ class Email:
 
         return response
     
+    def update_template_email(self, **config):
+        template_name = config["template_name"]
+        template_subject = config["template_subject"]
+        template_text = config["template_text"]
+        template_html = config["template_html"]
+
+        response = self.session_ses.update_template(
+            Template={
+                'TemplateName': template_name,
+                'SubjectPart': template_subject,
+                'TextPart': template_text,
+                'HtmlPart': template_html
+            }
+        )
+
+        return response
+    
     def send_email_template(self, **config):
         template_name = config["template_name"]
         email_to = config["email_to"]

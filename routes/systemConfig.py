@@ -1,4 +1,5 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, UploadFile, File, HTTPException
+from config.awsConfig import session
 from utils.email import Email
 from models.systemConfig import SetNewEmailTemplate
 
@@ -12,6 +13,20 @@ def create_template_email(bodyConfig: SetNewEmailTemplate):
     dict_body_config = dict(bodyConfig)
 
     response = email_conf.create_template_email(
+        template_name = dict_body_config["templateName"],
+        template_subject = dict_body_config["templateSubject"],
+        template_text = dict_body_config["templateText"],
+        template_html = dict_body_config["templateHtml"],
+    )
+
+    return response
+
+@system.put("/api/v1/system/templateEmail/update", tags = tags_metadata)
+def update_template_email(bodyConfig: SetNewEmailTemplate):
+    email_conf = Email()
+    dict_body_config = dict(bodyConfig)
+
+    response = email_conf.update_template_email(
         template_name = dict_body_config["templateName"],
         template_subject = dict_body_config["templateSubject"],
         template_text = dict_body_config["templateText"],
@@ -40,3 +55,48 @@ def test_template_email(bodyConfig: dict):
     )
 
     return response
+
+@system.post("/api/v1/system/login/admin", tags = tags_metadata)
+async def login_admin(file: UploadFile = File(...)):
+
+    
+    client_rekognition = session.client('rekognition')
+    client_s3 = session.client('s3')
+    contents = await file.read()
+
+    users = ["433e82a6-7eb1-4dc9-b2e6-73c373797291", "4a4ca505-36f2-4a41-8832-5afbf4591733", "7f3175be-09dc-4d97-83b2-cacc95b76669", "8978816d-f24f-4402-819c-68ef8c02e284"]
+
+    info_user = {}
+
+    for user in users:
+        print(user)
+        response =  client_rekognition.compare_faces(
+        SourceImage={
+            'S3Object': {
+                'Bucket': 'swiputils',
+                'Name': user
+            }
+        },
+        TargetImage={
+            'Bytes': contents,
+        },
+        SimilarityThreshold=70,
+        QualityFilter='AUTO'
+        )
+
+        if response is not None:
+            face_matches = response['FaceMatches']
+            if len(face_matches) != 0:
+                face_match = face_matches[0]
+                similarity = face_match['Similarity']
+                if similarity >= 70:
+                    info_document= client_s3.get_object(
+                        Bucket='swiputils',
+                        Key=user
+                    )
+                    name_user = info_document['Metadata']['name']
+                    info_user = {"name": name_user, "idAdmin": user}
+                    return {"filename": file.filename, **info_user}
+            
+    raise HTTPException(status_code=500, detail="No se encontro coincidencia")
+

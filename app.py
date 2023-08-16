@@ -8,6 +8,8 @@ from routes.profile import profileRouter
 from routes.bank import bankRouter
 from routes.systemConfig import system
 from routes.loans import loanRouter
+from routes.adminDocuments import adminDocument
+from routes.payment import payment
 
 app = FastAPI()
 
@@ -50,3 +52,5 @@ app.include_router(profileRouter)
 app.include_router(bankRouter)
 app.include_router(system)
 app.include_router(loanRouter)
+app.include_router(adminDocument)
+app.include_router(payment)

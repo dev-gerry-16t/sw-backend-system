@@ -1,12 +1,12 @@
 import json
 
-from datetime import datetime
-from fastapi import APIRouter, UploadFile, UploadFile, File, Form
+from fastapi import APIRouter, UploadFile, File, Form
 from fastapi.responses import StreamingResponse
 from models.personalDocument import ResponseModelScreen
 from utils.generateUUID import generate_UUID
 from config.db import db
 from utils.objectS3 import ObjectS3
+from utils.formatDate import FormatDate
 
 document = APIRouter()
 
@@ -31,8 +31,7 @@ async def upload_file(file: UploadFile = File(...),
     id_document=generate_UUID()
     data_json = json.loads(data)
     id_flow_document = data_json["idFlowDocumentType"]
-    timestamp = datetime.now()
-    timestamp_formatted = timestamp.strftime("%Y-%m-%d %H:%M:%S")
+    format_iso= FormatDate()
 
     new_document = {
         "idDocument": id_document,
@@ -67,7 +66,7 @@ async def upload_file(file: UploadFile = File(...),
             "idDocumentType": data_json["idDocumentType"],
             "extension": data_json["type"].split("/")[-1],
             "mimetype": data_json["type"],
-            "dateUpload": timestamp_formatted,
+            "dateUpload": format_iso.timezone_cdmx(),
             "size": data_json["size"],             
             })
     
@@ -107,6 +106,36 @@ async def upload_file(file: UploadFile = File(...),
                 )
 
 
+
+    return "OK"
+
+@document.post("/api/v1/document/reUpload",tags = tags_metadata)
+async def re_upload_file(file: UploadFile = File(...),
+                       data: str = Form(...)):
+    s3_object = ObjectS3()
+    
+    data_json = json.loads(data)
+    id_document=data_json["idDocument"]
+    format_iso= FormatDate()
+
+    meta_data = {
+            "documentName": data_json["documentName"],
+            "idDocumentType": data_json["idDocumentType"],
+            "extension": data_json["type"].split("/")[-1],
+            "mimetype": data_json["type"],
+    }
+
+    contents = await file.read()
+
+    
+    s3_object.upload_file(
+        file_name = id_document,
+        bucket_name = data_json["bucketSource"],
+        file_content = contents,
+        meta_data = meta_data
+    )
+
+    collection_repository_document.find_one_and_update({"idDocument": id_document}, {"$set": {"dateUpload": format_iso.timezone_cdmx(), "size": data_json["size"],**meta_data}})
 
     return "OK"
 

@@ -1,3 +1,4 @@
+import locale
 from datetime import datetime
 from fastapi import APIRouter
 from models.process import SetNewProcess, ResponseNewProcess, ResponseAllProcess, ResponseProcessById, ResponseGetPersonalInfo, ResponseGetCarInfo, ResponseGetBankInfo, RequestUpdateProcessById
@@ -6,11 +7,13 @@ from utils.generateUUID import generate_UUID
 from schemas.process import processResponseEntity
 from utils.email import Email
 from utils.selectTemplateEmail import select_template_email
+from utils.formatDate import FormatDate
 process = APIRouter()
 
 tags_metadata = ["Process V1"]
 
 collection_process = db["process"]
+collection_config = db["configs"]
 collection_profile = db["profiles"]
 collection_user = db["customers"]
 collection_car_info = db["carInformation"]
@@ -25,14 +28,13 @@ collection_repository_document = db["repositoryDocuments"]
 def create_process(process: SetNewProcess):
     request_process = dict(process)
 
-    timestamp = datetime.now()
-    timestamp_formatted = timestamp.strftime("%Y-%m-%d %H:%M:%S")
+    format_iso= FormatDate()
 
     id_process= generate_UUID()
 
     new_process = {
         "idProcess": id_process,
-        "createdAt": timestamp_formatted,
+        "createdAt": format_iso.timezone_cdmx(),
         "updatedAt": None,
         "idCarDocuments": request_process["idCarDocuments"],
         "idCarInformation": request_process["idCarInformation"],
@@ -48,6 +50,7 @@ def create_process(process: SetNewProcess):
             {"$addToSet":{"process":new_process}}
             )
     else:
+        configs_rule = collection_config.find_one({})
         collection_process.insert_one(
             {"idProcesses": request_process["idProcesses"],
             "idPersonalDocuments": request_process["idPersonalDocuments"],
@@ -57,10 +60,10 @@ def create_process(process: SetNewProcess):
             "isApproved": False,
             "approvedById": None,
             "approvedAt": None,
-            "createdAt": timestamp_formatted,
+            "createdAt": format_iso.timezone_cdmx(),
             "updatedAt": None,
-            "tax": 0.16,
-            "interestRate": 0.04,
+            "tax":  configs_rule["tax"] if configs_rule is not None else 0.16,
+            "interestRate": configs_rule["interest"] if configs_rule is not None else 0.04,
             "idSystemUser": request_process["idSystemUser"],
             "idLoans": request_process["idLoans"],
             "appointmentDate": None,
@@ -73,20 +76,10 @@ def create_process(process: SetNewProcess):
 def info_create_process(request: dict):
     request_info = dict(request)
 
-    email = Email()
-
-    template_name="SW_REQUESTCREDIT_V1"
-    email_to = "gerardoaldair@hotmail.com"
-    email_from = "Swip <no-reply@info.swip.mx>"
-    template_data = {
-        "idProcesses": request_info["idProcesses"],
-            }
-    email.send_email_template(
-        template_name = template_name,
-        email_to = email_to,
-        email_from = email_from,
-        template_data = template_data
-    )
+    select_template_email(
+                id_template = 1,
+                id_processes = request_info["idProcesses"],
+            )   
 
     return { "message": "Ok" }
 
@@ -203,8 +196,9 @@ def update_process_by_id(idProcess: str, process: dict):
     request_process = dict(process)
     id_processes = request_process["idProcesses"]
     id_car_information = request_process["idCarInformation"]
+    format_iso= FormatDate()
 
-    update_processes = request_process["updatedAt"]
+    update_processes = format_iso.timezone_cdmx()
 
     collection_process.find_one_and_update({"idProcesses":id_processes, "process.idProcess": idProcess}, {"$set":{"process.$.updatedAt": update_processes}})
 
@@ -228,8 +222,6 @@ def update_process_by_id(idProcesses: str, process: dict):
     id_system_user = request_process["idSystemUser"]
     id_status_process = request_process.get("idStatus", None)
     id_template_email = request_process.get("idTemplateEmail", None)
-    
-    email = Email()
 
     filter_query = {"idProcesses":idProcesses}
 
@@ -243,35 +235,72 @@ def update_process_by_id(idProcesses: str, process: dict):
     collection_process.update_one(filter_query, new_values)
     profile_name = collection_profile.find_one({"idSystemUser": id_system_user}).get("profileInformation", {}).get("name")
 
-   
-    if id_template_email == 2:
-        user_info = dict(collection_user.find_one({"idSystemUser": id_system_user},{"email":1}))
-        email_to = "gerardoaldair@hotmail.com"
-        select_template_email(
-            id_template_email, 
-            email_to = email_to, 
-            user = profile_name, 
-            amount_approved = f'{request_process["amountApprovedCreditFormatted"]} MXN'
-            )
-    # elif request_process["idStatus"] == 4:
-        # template_name="SW_REJECTEDCREDIT_V1"
-        # template_data = {
-        #     "user": profile_name,
-        #      }
-        # email.send_email_template(
-        #     template_name = template_name,
-        #     email_to = email_to,
-        #     email_from = email_from,
-        #     template_data = template_data
-        # )
+    if id_template_email is not None:
+            if id_template_email == 1:
+                select_template_email(
+                    id_template = id_template_email,
+                    id_processes = idProcesses,
+                )                              
+            if id_template_email == 2:
+                user_info = dict(collection_user.find_one({"idSystemUser": id_system_user},{"email":1}))
+                email_to = user_info["email"]
+                select_template_email(
+                    id_template = id_template_email, 
+                    email_to = email_to, 
+                    user = profile_name, 
+                    amount_approved = f'{request_process["amountApprovedCreditFormatted"]} MXN'
+                    )
+            if id_template_email == 3:
+                user_info = dict(collection_user.find_one({"idSystemUser": id_system_user},{"email":1}))
+                email_to = user_info["email"]
+                select_template_email(
+                    id_template = id_template_email, 
+                    email_to = email_to, 
+                    user = profile_name
+                    )
+            if id_template_email == 4:
+                user_info = dict(collection_user.find_one({"idSystemUser": id_system_user},{"email":1}))
+                email_to = user_info["email"]
+                select_template_email(
+                    id_template = id_template_email,
+                    id_processes = idProcesses,
+                    )
+            if id_template_email == 7:
+                user_info = dict(collection_user.find_one({"idSystemUser": id_system_user},{"email":1}))
+                email_to = user_info["email"]
+                select_template_email(
+                    id_template = id_template_email,
+                    id_system_user = id_system_user,
+                    email_to = email_to,
+                    amount_approved = f'{request_process["amountApprovedCreditFormatted"]} MXN',
+                    user = profile_name,
+                    )
+            if id_template_email == 8 or id_template_email == 9:
+                locale.setlocale(locale.LC_TIME, 'es_ES.UTF-8')
+                user_info = dict(collection_user.find_one({"idSystemUser": id_system_user},{"email":1}))
+                email_to = user_info["email"]
+                date =request_process["appointmentDate"]
+                date_object = datetime.strptime(date, '%Y-%m-%d %H:%M:%S')
+                day = date_object.day
+                month = date_object.strftime("%B")
+                year = date_object.year
+                hour = date_object.strftime("%I:%M %p")
+                am_pm = date_object.strftime('%p')
+                format_date = f'{day} de {month} del {year} a las {hour} {am_pm}'
+                select_template_email(
+                    id_template = 8,
+                    appointment_date = format_date,
+                    id_processes = idProcesses,
+                    user = profile_name,
+                    )
+                select_template_email(
+                    id_template = 9,
+                    email_to = email_to,
+                    appointment_date = format_date,
+                    user = profile_name,
+                    )
 
 
     return {
         "message": "Process updated successfully"
     }
-
-
-
-
-
-
