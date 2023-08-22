@@ -219,6 +219,7 @@ def update_process_by_id(idProcess: str, process: dict):
 @process.put("/api/v1/process/updateByIdProcesses/{idProcesses}",tags = tags_metadata)
 def update_process_by_id(idProcesses: str, process: dict):
     request_process = dict(process)
+    format_iso= FormatDate()
     id_system_user = request_process["idSystemUser"]
     id_status_process = request_process.get("idStatus", None)
     id_template_email = request_process.get("idTemplateEmail", None)
@@ -230,7 +231,11 @@ def update_process_by_id(idProcesses: str, process: dict):
     for key, value in request_process.items():
         if key not in ["idProcess", "idSystemUser", "amountApprovedCreditFormatted", "idTemplateEmail", "offset"]:
             field = key.replace('_', '')
-            new_values["$set"][field] = value
+            if key in ["approvedAt", "updatedAt"]:
+                new_values["$set"][field] = format_iso.timezone_cdmx()
+            else:
+                new_values["$set"][field] = value
+
 
     collection_process.update_one(filter_query, new_values)
     profile_name = collection_profile.find_one({"idSystemUser": id_system_user}).get("profileInformation", {}).get("name")
@@ -280,12 +285,12 @@ def update_process_by_id(idProcesses: str, process: dict):
                 user_info = dict(collection_user.find_one({"idSystemUser": id_system_user},{"email":1}))
                 email_to = user_info["email"]
                 date =request_process["appointmentDate"]
-                date_object = datetime.strptime(date, '%Y-%m-%d %H:%M:%S')
+                date_object = datetime.strptime(date, '%Y-%m-%dT%H:%M:%S%z')
                 day = date_object.day
                 month = date_object.strftime("%B")
                 year = date_object.year
                 hour = date_object.strftime("%I:%M %p")
-                am_pm = date_object.strftime('%p')
+                am_pm = "AM" if date_object.hour < 12 else "PM"
                 format_date = f'{day} de {month} del {year} a las {hour} {am_pm}'
                 select_template_email(
                     id_template = 8,

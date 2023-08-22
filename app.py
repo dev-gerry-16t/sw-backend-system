@@ -1,3 +1,5 @@
+import os
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from routes.user import user
@@ -10,6 +12,9 @@ from routes.systemConfig import system
 from routes.loans import loanRouter
 from routes.adminDocuments import adminDocument
 from routes.payment import payment
+from dotenv import load_dotenv
+
+load_dotenv()
 
 app = FastAPI()
 
@@ -33,12 +38,13 @@ app.add_middleware(
 
 @app.get("/health", tags=["health"])
 async def health_check():
+    mongo_host = os.getenv("REGION_AWS") or "not found"
     # Aquí puedes incluir cualquier lógica adicional para verificar el estado de tu aplicación
     # Por ejemplo, puedes comprobar conexiones a bases de datos, servicios externos, etc.
 
     # Si todo está bien, devolvemos un mensaje de éxito
 
-    return {"status": "ok"}
+    return {"status": "ok", "region": mongo_host}
 
 @app.get("/", tags=["root"])
 async def read_root():
