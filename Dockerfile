@@ -23,4 +23,4 @@ COPY . .
 # ENV STRIPE_API_KEY=sk_test_51NdnkHGOflXpNNOPAGE7i0s3mR56sWoP2XXAW9RTm61JDMwhhFxnW6vi5o77rEMF8qp95io0PIXBEBGx6C7LWj6u007fX2VMu9
 # ENV STRIPE_WEBHOOK_SECRET=whsec_e364afce18aa3450efccc88d7491e342ccac73750254d99b154827699ee8c4b1
 
-CMD ["uvicorn", "app:app", "--proxy-headers", "--host", "0.0.0.0", "--port", "80"]
+CMD ["uvicorn", "app:app", "--proxy-headers", "--host", "0.0.0.0", "--port", "80","--forwarded-allow-ips", "*"]
