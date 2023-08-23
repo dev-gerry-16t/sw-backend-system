@@ -281,7 +281,7 @@ def update_process_by_id(idProcesses: str, process: dict):
                     user = profile_name,
                     )
             if id_template_email == 8 or id_template_email == 9:
-                locale.setlocale(locale.LC_TIME, 'es_ES.UTF-8')
+                locale.setlocale(locale.LC_TIME, 'es_MX.utf8')
                 user_info = dict(collection_user.find_one({"idSystemUser": id_system_user},{"email":1}))
                 email_to = user_info["email"]
                 date =request_process["appointmentDate"]

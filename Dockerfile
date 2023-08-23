@@ -1,5 +1,13 @@
 FROM python:3.11-slim
 
+RUN apt-get update && apt-get install -y locales
+
+RUN echo "es_MX.UTF-8 UTF-8" >> /etc/locale.gen && locale-gen
+
+ENV LC_ALL es_MX.UTF-8
+ENV LANG es_MX.UTF-8
+ENV LANGUAGE es_MX:es
+
 WORKDIR /app
 
 COPY requirements.txt .
