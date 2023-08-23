@@ -25,7 +25,12 @@ app = FastAPI()
 #     "http://localhost:8000",
 # ]
 origins = [
-    "*",
+    "http://localhost",
+    "http://localhost:5173",
+    "http://localhost:3000",
+    "http://localhost:8000",
+    "https://admin.swip.mx",
+    "https://app.swip.mx",
 ]
 
 app.add_middleware(
