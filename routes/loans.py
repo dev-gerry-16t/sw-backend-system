@@ -138,7 +138,7 @@ def get_next_payments(idSystemUser: str):
     list_next_to_pay = []
 
     for loan in loan_list:
-        if loan["isLiquidated"] == False:
+        if loan["isLiquidated"] == False and loan["idStatus"] != 1:
             # diff_days = format_iso.diff_dates_since_now(loan["nextPaymentAt"])
             # if diff_days <= 30:
             list_next_to_pay.append(loan)

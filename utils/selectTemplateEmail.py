@@ -107,6 +107,19 @@ def select_template_email(id_template, **options):
                 email_from = email_from,
                 template_data = { "appointmentDate": appointment_date, "user": user }
             )
+    elif id_template == 11:
+        template_name="SW_LOANSENT_V1"
+        email_to = options.get("email_to", None)
+        amount_loan = options.get("amount_loan", None)
+        user = options.get("user", None)
+
+        if email_to is not None and user is not None and amount_loan is not None:
+            email.send_email_template(
+                template_name = template_name,
+                email_to = email_to,
+                email_from = email_from,
+                template_data = { "amountLoan": amount_loan, "user": user }
+            )
 
 
 

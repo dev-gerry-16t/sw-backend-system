@@ -1,6 +1,7 @@
 import stripe
 import os
 import json
+import locale
 import datetime
 import pytz
 from fastapi import APIRouter, HTTPException, Header, Request, UploadFile, File, Form
@@ -10,6 +11,7 @@ from dotenv import load_dotenv
 from config.db import db
 from utils.generateUUID import generate_UUID
 from utils.formatDate import FormatDate
+from utils.selectTemplateEmail import select_template_email
 
 
 load_dotenv()
@@ -26,6 +28,8 @@ collection_payment_type = db["pymentTypes"]
 collection_repository_admin_document = db["repositoryAdminDocuments"]
 collection_admin_document = db["adminDocuments"]
 collection_document_type = db["typeAdminDocuments"]
+collection_user = db["customers"]
+collection_profile = db["profiles"]
 
 @payment.post("/api/v1/payment/createCheckout", tags = tags_metadata)
 async def create_checkout(bodyConfig: dict):
@@ -96,7 +100,35 @@ async def upload_file(file: UploadFile = File(...),
 
     iso_paid_at = format_iso.unix_timestamp_to_iso(data_json["paidAt"])
 
-    new_history_payment = {
+    collection_repository_admin_document.create_index("idDocument", unique=True)
+    collection_repository_admin_document.insert_one({
+            **meta_data,
+            "idDocument": id_document, 
+            "isActive": True,
+            "customName": data_json["name"],
+            "bucketSource": bucket_source,
+            "dateUpload": format_iso.timezone_cdmx(),
+            "size": data_json["size"],             
+            })
+    
+    id_payment_type = int(data_json["idPaymentType"])
+    format_iso_cdmx = format_iso.timezone_cdmx()
+
+    amount_total = data_json["amount"]
+
+    loan_info = collection_loan.find_one({"idLoans": data_json["idSystemUser"]})
+    find_loan_info = {}
+    id_pay = int(data_json["idPay"])
+
+    if loan_info:
+        for loan in loan_info["loans"]:
+            if loan["idLoan"] == data_json["idLoan"]:
+                find_loan_info = loan
+                break
+
+    if id_pay == 1:
+        next_payment_at = format_iso.add_single_month(data_json["dueDateAt"])
+        new_history_payment = {
                 "idHistoryPayment": id_history_payment,
                 "idPaymentType": data_json["idPaymentType"],
                 "amount": data_json["amount"],
@@ -111,74 +143,84 @@ async def upload_file(file: UploadFile = File(...),
                 "idPay":data_json["idPay"],
                 "idDocument": id_document,
                 "documentUrl":f"/api/v1/document/getDocument/{bucket_source}/{id_document}",
-            }
- 
-
-
-    collection_repository_admin_document.create_index("idDocument", unique=True)
-    collection_repository_admin_document.insert_one({
-            **meta_data,
-            "idDocument": id_document, 
-            "isActive": True,
-            "customName": data_json["name"],
-            "bucketSource": bucket_source,
-            "dateUpload": format_iso.timezone_cdmx(),
-            "size": data_json["size"],             
-            })
-    
-    id_payment_type = int(data_json["idPaymentType"])
-    next_payment_at = format_iso.add_single_month(data_json["dueDateAt"])
-    format_iso_cdmx = format_iso.timezone_cdmx()
-
-    amount_total = data_json["amount"]
-
-    loan_info = collection_loan.find_one({"idLoans": data_json["idSystemUser"]})
-    find_loan_info = {}
-
-    if loan_info:
-        for loan in loan_info["loans"]:
-            if loan["idLoan"] == data_json["idLoan"]:
-                find_loan_info = loan
-                break
-    
-    if id_payment_type == 1:
+            } 
+        
+        if id_payment_type == 1:
+                update = {"$push": {"loans.$.historyPayment": new_history_payment},
+                        "$set": {"loans.$.idStatus": 1, "loans.$.nextPaymentAt": next_payment_at}
+                        }
+                collection_loan.update_one(query, update)
+        elif id_payment_type == 2:
             update = {"$push": {"loans.$.historyPayment": new_history_payment},
-                    "$set": {"loans.$.idStatus": 1, "loans.$.nextPaymentAt": next_payment_at}
+                    "$set": {"loans.$.idStatus": 5, "loans.$.nextPaymentAt": None, "loans.$.isLiquidated": True, "loans.$.approvedAt": format_iso_cdmx}
+                    }
+            document_process = collection_process.find_one({"idProcesses": data_json["idProcesses"]})
+            amount_available = document_process["amountAvailable"]
+            new_amount_available = amount_available + find_loan_info["amountLoan"]
+            collection_loan.update_one(query, update)
+            collection_process.update_one({"idProcesses": data_json["idProcesses"]}, {"$set": {"amountAvailable": new_amount_available}})
+        elif id_payment_type == 3:
+            amount_to_capital = amount_total - find_loan_info["amountMonthly"]
+            document_process = collection_process.find_one({"idProcesses": data_json["idProcesses"]})
+            amount_available = document_process["amountAvailable"] + amount_to_capital
+            new_amount_loan = find_loan_info["amountLoan"] - amount_to_capital
+            new_amount_interest = new_amount_loan * document_process["interestRate"]
+            new_amount_iva = new_amount_interest * document_process["tax"]
+            new_amount_monthly = new_amount_interest + new_amount_iva
+            new_amount_pay_off = new_amount_monthly + new_amount_loan
+
+            update = {"$push": {"loans.$.historyPayment": new_history_payment},
+                    "$set": {
+                        "loans.$.idStatus": 1, 
+                        "loans.$.nextPaymentAt": next_payment_at, 
+                        "loans.$.amountLoan": new_amount_loan, 
+                        "loans.$.amountLoanInitial": find_loan_info["amountLoan"],
+                        "loans.$.amountInterest": new_amount_interest,
+                        "loans.$.amountIva": new_amount_iva,
+                        "loans.$.amountMonthly": new_amount_monthly,
+                        "loans.$.amountPayOff": new_amount_pay_off,
+                        }
                     }
             collection_loan.update_one(query, update)
-    elif id_payment_type == 2:
+            collection_process.update_one({"idProcesses": data_json["idProcesses"]}, {"$set": {"amountAvailable": amount_available}})
+    elif id_pay == 0:
+        next_payment_at = format_iso.add_single_month(iso_paid_at)
+        locale.setlocale(locale.LC_ALL, 'es_MX.utf8')
+        amount_loan_currency= locale.currency(data_json["amount"], grouping=True, symbol=True)
+        amount_loan_currency += " MXN"
+        new_history_payment = {
+                "idHistoryPayment": id_history_payment,
+                "idPaymentType": data_json["idPaymentType"],
+                "amount": data_json["amount"],
+                "card": None,
+                "brand": None,
+                "paymentFrom": data_json["paymentFrom"],
+                "paidAt": iso_paid_at,
+                "dueDateAt": data_json["dueDateAt"],
+                "idPaymentIntent": None,
+                "idPaymentMethod": None,
+                "confirmedBy": data_json["confirmedBy"],
+                "idPay":data_json["idPay"],
+                "idDocument": id_document,
+                "documentUrl":f"/api/v1/document/getDocument/{bucket_source}/{id_document}",
+            } 
         update = {"$push": {"loans.$.historyPayment": new_history_payment},
-                "$set": {"loans.$.idStatus": 5, "loans.$.nextPaymentAt": None, "loans.$.isLiquidated": True, "loans.$.approvedAt": format_iso_cdmx}
-                }
-        document_process = collection_process.find_one({"idProcesses": data_json["idProcesses"]})
-        amount_available = document_process["amountAvailable"]
-        new_amount_available = amount_available + find_loan_info["amountLoan"]
+                        "$set": {"loans.$.idStatus": 2, "loans.$.nextPaymentAt": next_payment_at}
+                        }
         collection_loan.update_one(query, update)
-        collection_process.update_one({"idProcesses": data_json["idProcesses"]}, {"$set": {"amountAvailable": new_amount_available}})
-    elif id_payment_type == 3:
-        amount_to_capital = amount_total - find_loan_info["amountMonthly"]
-        document_process = collection_process.find_one({"idProcesses": data_json["idProcesses"]})
-        amount_available = document_process["amountAvailable"] + amount_to_capital
-        new_amount_loan = find_loan_info["amountLoan"] - amount_to_capital
-        new_amount_interest = new_amount_loan * document_process["interestRate"]
-        new_amount_iva = new_amount_interest * document_process["tax"]
-        new_amount_monthly = new_amount_interest + new_amount_iva
-        new_amount_pay_off = new_amount_monthly + new_amount_loan
+        user_info = dict(collection_user.find_one({"idSystemUser": data_json["idSystemUser"]},{"email":1}))
+        profile_name = collection_profile.find_one({"idSystemUser": data_json["idSystemUser"]}).get("profileInformation", {}).get("name")
 
-        update = {"$push": {"loans.$.historyPayment": new_history_payment},
-                "$set": {
-                    "loans.$.idStatus": 1, 
-                    "loans.$.nextPaymentAt": next_payment_at, 
-                    "loans.$.amountLoan": new_amount_loan, 
-                    "loans.$.amountLoanInitial": find_loan_info["amountLoan"],
-                    "loans.$.amountInterest": new_amount_interest,
-                    "loans.$.amountIva": new_amount_iva,
-                    "loans.$.amountMonthly": new_amount_monthly,
-                    "loans.$.amountPayOff": new_amount_pay_off,
-                    }
-                }
-        collection_loan.update_one(query, update)
-        collection_process.update_one({"idProcesses": data_json["idProcesses"]}, {"$set": {"amountAvailable": amount_available}})
+        email_to = user_info["email"]
+
+        select_template_email(
+            id_template= 11,
+            email_to= email_to,
+            amount_loan= amount_loan_currency,
+            user= profile_name,
+        )
+
+
     
     
 
