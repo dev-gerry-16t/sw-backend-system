@@ -1,3 +1,4 @@
+import requests
 import os
 import json
 import base64
@@ -8,11 +9,53 @@ load_dotenv()
 
 url_domain = os.getenv("FRONT_END_ADMIN_URL")
 url_domain_client = os.getenv("FRONT_END_CLIENT_URL")
+api_key_mandrill = os.getenv("API_KEY_MANDRILL")
+
+def send_email_template(template_name, email_to, template_data):
+    url = "https://mandrillapp.com/api/1.0/messages/send-template"
+
+    headers = {
+        "Content-Type": "application/json"
+    }
+
+    result = []
+    for key, value in template_data.items():
+        result.append({
+            "name": key,
+            "content": value
+        })
+
+    emails_str = email_to
+    emails_list = emails_str.split(',')
+    result_email = []
+    for email in emails_list:
+        result_email.append({
+            "email": email
+        })
+
+    data = {
+        "key": api_key_mandrill,
+        "template_name": template_name,
+        "template_content": [],
+        "message": {
+            "from_email": "no-reply@swip.mx",
+            "from_name": "Swip",
+            "to": result_email,
+            "merge_language": "handlebars",
+            "global_merge_vars": result,
+        }
+    }
+
+    response = requests.post(url, headers=headers, data=json.dumps(data))
+
+    if response.status_code == 200:
+        print('Correo electrónico enviado exitosamente.')
+    else:
+        print('Hubo un problema al enviar el correo electrónico.')
+
+
 
 def select_template_email(id_template, **options):
-    
-    email = Email()
-    email_from = "Swip <no-reply@info.swip.mx>"
     email_to_admins = "gerardocto@swip.mx"
 
     if id_template == 1:
@@ -20,11 +63,10 @@ def select_template_email(id_template, **options):
         id_processes = options.get("id_processes", None)
 
         if  id_processes is not None:
-            email.send_email_template(
+            send_email_template(
                 template_name = template_name,
                 email_to = email_to_admins,
-                email_from = email_from,
-                template_data = { "url": f"{url_domain}/procesos/detalle/{id_processes}" }
+                template_data = { "host": url_domain, "idProcesses": id_processes }
             )            
     elif id_template == 2:
         template_name="SW_APPROVEDCREDIT_V2"
@@ -33,10 +75,9 @@ def select_template_email(id_template, **options):
         amount_approved = options.get("amount_approved", None)
 
         if email_to is not None and user is not None and amount_approved is not None:
-            email.send_email_template(
+            send_email_template(
                 template_name = template_name,
                 email_to = email_to,
-                email_from = email_from,
                 template_data = { "user": user, "amountApprovedCredit": amount_approved }
             )
     elif id_template == 3:
@@ -45,10 +86,9 @@ def select_template_email(id_template, **options):
         user = options.get("user", None)
 
         if email_to is not None and user is not None:
-            email.send_email_template(
+            send_email_template(
                 template_name = template_name,
                 email_to = email_to,
-                email_from = email_from,
                 template_data = { "user": user }
             )
     elif id_template == 4:
@@ -57,11 +97,10 @@ def select_template_email(id_template, **options):
         id_processes = options.get("id_processes", None)
 
         if email_to is not None and id_processes is not None:
-            email.send_email_template(
+            send_email_template(
                 template_name = template_name,
                 email_to = email_to,
-                email_from = email_from,
-                template_data = { "url": f"{url_domain}/procesos/detalle/{id_processes}" }
+                template_data = { "host": url_domain , "idProcesses": id_processes }
             )
     elif id_template == 7:
         template_name="SW_PREAPPROVECREDIT_V1"
@@ -74,11 +113,10 @@ def select_template_email(id_template, **options):
         id_encoded = base64.b64encode(data_user_jumps.encode()).decode()
 
         if email_to is not None and user is not None and amount_approved is not None and id_system_user is not None:
-            email.send_email_template(
+            send_email_template(
                 template_name = template_name,
                 email_to = email_to,
-                email_from = email_from,
-                template_data = { "user": user, "amountApprovedCredit": amount_approved, "url":  f"{url_domain_client}/programar-cita?d={id_encoded}" }
+                template_data = { "user": user, "amountApprovedCredit": amount_approved, "host": url_domain_client, "token": id_encoded }
             )
     elif id_template == 8:
         template_name="SW_CONFIRMFIRSTSCHEDULE_V1"
@@ -88,11 +126,10 @@ def select_template_email(id_template, **options):
         user = options.get("user", None)
 
         if email_to is not None and user is not None and appointment_date is not None and id_processes is not None:
-            email.send_email_template(
+            send_email_template(
                 template_name = template_name,
                 email_to = email_to,
-                email_from = email_from,
-                template_data = { "url": f"{url_domain}/procesos/detalle/{id_processes}", "appointmentDate": appointment_date, "user": user }
+                template_data = { "host": url_domain, "idProcesses":  id_processes,"appointmentDate": appointment_date, "user": user }
             )
     elif id_template == 9:
         template_name="SW_CONFIRMFIRSTSCHEDULE_USER_V1"
@@ -101,10 +138,9 @@ def select_template_email(id_template, **options):
         user = options.get("user", None)
 
         if email_to is not None and user is not None and appointment_date is not None:
-            email.send_email_template(
+            send_email_template(
                 template_name = template_name,
                 email_to = email_to,
-                email_from = email_from,
                 template_data = { "appointmentDate": appointment_date, "user": user }
             )
     elif id_template == 11:
@@ -114,12 +150,123 @@ def select_template_email(id_template, **options):
         user = options.get("user", None)
 
         if email_to is not None and user is not None and amount_loan is not None:
-            email.send_email_template(
+            send_email_template(
                 template_name = template_name,
                 email_to = email_to,
-                email_from = email_from,
                 template_data = { "amountLoan": amount_loan, "user": user }
             )
+
+# def select_template_email(id_template, **options):
+    
+#     email = Email()
+#     email_from = "Swip <no-reply@info.swip.mx>"
+#     email_to_admins = "gerardocto@swip.mx"
+
+#     if id_template == 1:
+#         template_name="SW_REQUESTCREDIT_V1"
+#         id_processes = options.get("id_processes", None)
+
+#         if  id_processes is not None:
+#             email.send_email_template(
+#                 template_name = template_name,
+#                 email_to = email_to_admins,
+#                 email_from = email_from,
+#                 template_data = { "url": f"{url_domain}/procesos/detalle/{id_processes}" }
+#             )            
+#     elif id_template == 2:
+#         template_name="SW_APPROVEDCREDIT_V2"
+#         email_to = options.get("email_to", None)
+#         user = options.get("user", None)
+#         amount_approved = options.get("amount_approved", None)
+
+#         if email_to is not None and user is not None and amount_approved is not None:
+#             email.send_email_template(
+#                 template_name = template_name,
+#                 email_to = email_to,
+#                 email_from = email_from,
+#                 template_data = { "user": user, "amountApprovedCredit": amount_approved }
+#             )
+#     elif id_template == 3:
+#         template_name="SW_REJECTEDCREDIT_V1"
+#         email_to = options.get("email_to", None)
+#         user = options.get("user", None)
+
+#         if email_to is not None and user is not None:
+#             email.send_email_template(
+#                 template_name = template_name,
+#                 email_to = email_to,
+#                 email_from = email_from,
+#                 template_data = { "user": user }
+#             )
+#     elif id_template == 4:
+#         template_name="SW_REQUESTLOAN_V1"
+#         email_to = email_to_admins
+#         id_processes = options.get("id_processes", None)
+
+#         if email_to is not None and id_processes is not None:
+#             email.send_email_template(
+#                 template_name = template_name,
+#                 email_to = email_to,
+#                 email_from = email_from,
+#                 template_data = { "url": f"{url_domain}/procesos/detalle/{id_processes}" }
+#             )
+#     elif id_template == 7:
+#         template_name="SW_PREAPPROVECREDIT_V1"
+#         email_to = options.get("email_to", None)
+#         user = options.get("user", None)
+#         amount_approved = options.get("amount_approved", None)
+#         id_system_user = options.get("id_system_user", None)
+#         data_user = { "idSystemUser": id_system_user }
+#         data_user_jumps = json.dumps(data_user)
+#         id_encoded = base64.b64encode(data_user_jumps.encode()).decode()
+
+#         if email_to is not None and user is not None and amount_approved is not None and id_system_user is not None:
+#             email.send_email_template(
+#                 template_name = template_name,
+#                 email_to = email_to,
+#                 email_from = email_from,
+#                 template_data = { "user": user, "amountApprovedCredit": amount_approved, "url":  f"{url_domain_client}/programar-cita?d={id_encoded}" }
+#             )
+#     elif id_template == 8:
+#         template_name="SW_CONFIRMFIRSTSCHEDULE_V1"
+#         email_to = email_to_admins
+#         appointment_date = options.get("appointment_date", None)
+#         id_processes = options.get("id_processes", None)
+#         user = options.get("user", None)
+
+#         if email_to is not None and user is not None and appointment_date is not None and id_processes is not None:
+#             email.send_email_template(
+#                 template_name = template_name,
+#                 email_to = email_to,
+#                 email_from = email_from,
+#                 template_data = { "url": f"{url_domain}/procesos/detalle/{id_processes}", "appointmentDate": appointment_date, "user": user }
+#             )
+#     elif id_template == 9:
+#         template_name="SW_CONFIRMFIRSTSCHEDULE_USER_V1"
+#         email_to = options.get("email_to", None)
+#         appointment_date = options.get("appointment_date", None)
+#         user = options.get("user", None)
+
+#         if email_to is not None and user is not None and appointment_date is not None:
+#             email.send_email_template(
+#                 template_name = template_name,
+#                 email_to = email_to,
+#                 email_from = email_from,
+#                 template_data = { "appointmentDate": appointment_date, "user": user }
+#             )
+#     elif id_template == 11:
+#         template_name="SW_LOANSENT_V1"
+#         email_to = options.get("email_to", None)
+#         amount_loan = options.get("amount_loan", None)
+#         user = options.get("user", None)
+
+#         if email_to is not None and user is not None and amount_loan is not None:
+#             email.send_email_template(
+#                 template_name = template_name,
+#                 email_to = email_to,
+#                 email_from = email_from,
+#                 template_data = { "amountLoan": amount_loan, "user": user }
+#             )
 
 
 

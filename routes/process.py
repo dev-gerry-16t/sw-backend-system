@@ -289,7 +289,7 @@ def update_process_by_id(idProcesses: str, process: dict):
                 day = date_object.day
                 month = date_object.strftime("%B")
                 year = date_object.year
-                hour = date_object.strftime("%I:%M %p")
+                hour = date_object.strftime("%I:%M")
                 am_pm = "AM" if date_object.hour < 12 else "PM"
                 format_date = f'{day} de {month} del {year} a las {hour} {am_pm}'
                 select_template_email(
