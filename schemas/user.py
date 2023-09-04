@@ -10,6 +10,7 @@ def userRegisterEntity(id, item) -> dict:
             "idUserType":item["idUserType"],
             "screenNumber":item["screenNumber"],
             "idLoans":item["idLoans"],
+            "username":item["username"],
 
     }
 
@@ -29,4 +30,5 @@ def userLoginEntity(item) -> dict:
             "token":item["token"],
             "path":item["path"] or "/home",
             "profileInformation":item["profileInformation"],
+            "username":item["username"]
     }

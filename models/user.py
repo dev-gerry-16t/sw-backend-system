@@ -27,6 +27,7 @@ class ResponseNewUser(BaseModel):
     idBankAccounts: str
     idUserType: int
     screenNumber: int
+    username: str
     idLoans: str
 
 class ResponseProgress(BaseModel):
@@ -34,6 +35,7 @@ class ResponseProgress(BaseModel):
 
 class NewUser(BaseModel):
     email: str
+    username: str
     phoneNumber: str
     password: str
     idUserType: int

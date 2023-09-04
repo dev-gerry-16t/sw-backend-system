@@ -37,7 +37,8 @@ def user_register(request: NewUser):
         "idBankAccounts": generate_UUID(),
         "idLoans": generate_UUID(),
         "registerAt": format_iso.timezone_cdmx(),
-        "lastLoginAt": None
+        "lastLoginAt": None,
+        "username": new_user["username"],
     }
     join_dict = {**new_user,**new_dict}
 
