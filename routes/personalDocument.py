@@ -1,14 +1,22 @@
 import json
+import os
 
-from fastapi import APIRouter, UploadFile, File, Form
+from fastapi import APIRouter, UploadFile, File, Form, HTTPException
 from fastapi.responses import StreamingResponse
 from models.personalDocument import ResponseModelScreen
 from utils.generateUUID import generate_UUID
 from config.db import db
 from utils.objectS3 import ObjectS3
 from utils.formatDate import FormatDate
+from dotenv import load_dotenv
 
 document = APIRouter()
+load_dotenv()
+
+BUCKET_PERSONAL_DOCUMENT = os.getenv("BUCKET_PERSONAL_DOCUMENT")
+BUCKET_PERSONAL_MORAL_DOCUMENT = os.getenv("BUCKET_PERSONAL_MORAL_DOCUMENT")
+BUCKET_CAR_DOCUMENT = os.getenv("BUCKET_CAR_DOCUMENT")
+BUCKET_CAR_MORAL_DOCUMENT = os.getenv("BUCKET_CAR_MORAL_DOCUMENT")
 
 tags_metadata = ["Personal Document V1"]
 
@@ -198,6 +206,56 @@ async def put_flow_screen_document(requestFlow: dict):
                     {"idScreen": doc["idScreen"]}, 
                     {"$set":{"index": doc["index"]}}
                     )
+                
+    return {"message": "Ok"}
+
+@document.post("/api/v1/document/addFlowScreenDocument", tags = tags_metadata)
+async def add_flow_screen_document(requestFlow: dict):
+    int_id_user= requestFlow["idUserType"]
+    flow_document_type= requestFlow["idFlowDocumentType"]
+    id_screen = generate_UUID()
+    id_document_type = generate_UUID()
+
+    type_document_payload = {
+        "idDocumentType": id_document_type,
+        "name": requestFlow["name"],
+        "description": requestFlow["description"],
+        "type": requestFlow["type"],
+        "capture": requestFlow["capture"],
+        "accept": requestFlow["accept"],
+        "label": requestFlow["label"],        
+    }
+
+    dynamic_document_payload = {
+        "idScreen": id_screen,
+        "idDocumentType": id_document_type,
+        "index": requestFlow["index"]
+    }
+
+    try:
+
+        if flow_document_type == 0:
+            if int_id_user == 0:
+                type_document_payload["bucketSource"] = BUCKET_PERSONAL_DOCUMENT
+                collection_type_document.insert_one(type_document_payload)
+                collection.insert_one(dynamic_document_payload)
+            elif int_id_user == 1:
+                type_document_payload["bucketSource"] = BUCKET_PERSONAL_MORAL_DOCUMENT
+                collection_type_document.insert_one(type_document_payload)
+                collection_moral.insert_one(dynamic_document_payload)
+        elif flow_document_type == 1:
+            if int_id_user == 0:
+                type_document_payload["bucketSource"] = BUCKET_CAR_DOCUMENT
+                collection_type_document.insert_one(type_document_payload)
+                collection_car.insert_one(dynamic_document_payload)
+            elif int_id_user == 1:
+                type_document_payload["bucketSource"] = BUCKET_CAR_MORAL_DOCUMENT
+                collection_type_document.insert_one(type_document_payload)
+                collection_car_moral.insert_one(dynamic_document_payload)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail={"dbMessage": str(
+            e), "errorMessage": "Hubo un error al intentar guardar el tipo de documento"})
+
                 
     return {"message": "Ok"}
 
