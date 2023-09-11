@@ -19,7 +19,6 @@ load_dotenv()
 app = FastAPI(
     title="Swip API",
     version="0.0.1",
-    root_path="/",
 )
 
 # origins = [
