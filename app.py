@@ -16,7 +16,11 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-app = FastAPI()
+app = FastAPI(
+    title="Swip API",
+    version="0.0.1",
+    root_path="/",
+)
 
 # origins = [
 #     "http://localhost",

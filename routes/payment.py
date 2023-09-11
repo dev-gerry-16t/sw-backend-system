@@ -227,7 +227,7 @@ async def upload_file(file: UploadFile = File(...),
     return "OK"
 
 @payment.post("/api/v1/payment/webhook", tags = tags_metadata)
-async def webhook(request: Request, stripe_signature: str = Header(str)):
+async def webhook(request: Request, stripe_signature: str = Header(...)):
     format_iso= FormatDate()
     webhook_secret = os.getenv("STRIPE_WEBHOOK_SECRET")
     data = await request.body()
@@ -251,7 +251,6 @@ async def webhook(request: Request, stripe_signature: str = Header(str)):
         format_iso_cdmx = format_iso.timezone_cdmx()
         session = event.data.object
         metadata = session["metadata"]
-        print(metadata)
         id_payment_intent = session["payment_intent"]
         payment_intent = stripe.PaymentIntent.retrieve(id_payment_intent)
         id_payment_method = payment_intent["payment_method"]

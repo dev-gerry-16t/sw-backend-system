@@ -69,7 +69,6 @@ async def login_admin(file: UploadFile = File(...)):
     info_user = {}
 
     for user in users:
-        print(user)
         response =  client_rekognition.compare_faces(
         SourceImage={
             'S3Object': {

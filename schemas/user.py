@@ -27,6 +27,7 @@ def userLoginEntity(item) -> dict:
             "idProfile":item["idProfile"],
             "idBankAccounts":item["idBankAccounts"],
             "lastLoginAt":item["lastLoginAt"] or "",
+            "idLoans":item["idLoans"],
             "token":item["token"],
             "path":item["path"] or "/home",
             "profileInformation":item["profileInformation"],
