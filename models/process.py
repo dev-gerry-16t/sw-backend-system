@@ -64,6 +64,7 @@ class ResponseGetPersonalInfo(BaseModel):
     rfc: str
     numberId: str
     addressInformation: List[ListAddress]
+    level: Union[int, None]
 
 class ResponseGetCarInfo(BaseModel):
     brand: str

@@ -12,10 +12,11 @@ from utils.formatDate import FormatDate
 
 box = "User Register V1"
 
-
+collection_process = db["process"]
 collection = db["customers"]
 collection_profile = db["profiles"]
 collection_screen = db["screens"]
+collection_config = db["configs"]
 
 user = APIRouter()
 
@@ -39,6 +40,7 @@ def user_register(request: NewUser):
         "registerAt": format_iso.timezone_cdmx(),
         "lastLoginAt": None,
         "username": new_user["username"],
+        "level": 1,
     }
     join_dict = {**new_user, **new_dict}
 
@@ -74,7 +76,7 @@ def user_login(user: Login):
         {"screenNumber": user_db["screenNumber"]})
     join_dict = {**user_db, "token": token,
                  "path": path_user["path"], "profileInformation": user_profile["profileInformation"] if user_profile is not None else {}}
-
+    
     return userLoginEntity(join_dict)
 
 
@@ -159,6 +161,26 @@ def user_change_password(change: dict):
     else:
         raise HTTPException(status_code=400, detail={
                             "dbMessage": "Token is not valid", "errorMessage": "Token invalido o expirado"})
+
+
+@user.put('/api/v1/user/changeLevel/{idSystemUser}', tags=[box])
+def user_change_level(idSystemUser: str, level: int = Query(None)):
+    collection.update_one({"idSystemUser": idSystemUser}, {"$set": {"level": level}}, upsert=True)
+
+    configs_rule = collection_config.find_one({})
+    config_level = configs_rule["configLevel"]
+    interest_by_level = 0
+
+    for levelItem in config_level:
+            if level == levelItem["level"]:
+                interest_by_level = levelItem["interest"]
+                break
+
+    collection_process.update_one(
+        {"idSystemUser": idSystemUser},
+        {"$set": {"interestRate": interest_by_level}})
+    
+    return {"message": "Se ha cambiado el nivel"}
 
     #  collection.update_one({"idSystemUser": idSystemUser}, {"$set": {"screenNumber": int_screen_number}}, upsert=True)
 

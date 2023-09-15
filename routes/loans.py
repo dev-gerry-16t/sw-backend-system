@@ -104,7 +104,7 @@ def get_all_loans(idSystemUser: str):
 def get_opening_price(idProcesses: str):
 
     process_car = collection_process.find_one({"idProcesses": idProcesses}).get("process", None)
-    config_info_gps = collection_config.find_one({}).get("gpsMonthly", 0)
+    config_info_gps = collection_config.find_one({}).get("gpsInstall", 0)
     number_of_units = len(process_car)
     total_gps = number_of_units * config_info_gps
 

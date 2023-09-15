@@ -31,5 +31,6 @@ def userLoginEntity(item) -> dict:
             "token":item["token"],
             "path":item["path"] or "/home",
             "profileInformation":item["profileInformation"],
-            "username":item["username"]
+            "username":item["username"],
+            "level":item["level"],
     }

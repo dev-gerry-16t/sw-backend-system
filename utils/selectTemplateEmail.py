@@ -4,6 +4,7 @@ import json
 import base64
 from utils.email import Email
 from dotenv import load_dotenv
+from utils.slackWebhook import send_slack_message
 
 load_dotenv()
 
@@ -69,6 +70,9 @@ def select_template_email(id_template, **options):
                 email_to=email_to_admins,
                 template_data={"host": url_domain, "idProcesses": id_processes}
             )
+            send_slack_message(
+                f"Se ha solicitado un nuevo crédito, entra a {url_domain}/procesos/detalle/{id_processes} y valida la información para pre aprobar")
+
     elif id_template == 2:
         template_name = "SW_APPROVEDCREDIT_V2"
         email_to = options.get("email_to", None)
@@ -104,6 +108,8 @@ def select_template_email(id_template, **options):
                 email_to=email_to,
                 template_data={"host": url_domain, "idProcesses": id_processes}
             )
+            send_slack_message(
+                f"Se ha solicitado un nuevo prestamo, entra a {url_domain}/procesos/detalle/{id_processes} y dispersa el dinero")
     elif id_template == 6:
         template_name = "SW_RECOVERYPASS_V1"
         email_to = options.get("email_to", None)
@@ -148,6 +154,8 @@ def select_template_email(id_template, **options):
                 template_data={"host": url_domain, "idProcesses":  id_processes,
                                "appointmentDate": appointment_date, "user": user}
             )
+            send_slack_message(
+                f"Se ha solicitado programado una cita con el usuario {user} para el {appointment_date}, aqui dejo el detalle {url_domain}/procesos/detalle/{id_processes}")
     elif id_template == 9:
         template_name = "SW_CONFIRMFIRSTSCHEDULE_USER_V1"
         email_to = options.get("email_to", None)

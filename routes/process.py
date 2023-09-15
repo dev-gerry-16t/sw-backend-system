@@ -53,6 +53,14 @@ def create_process(process: SetNewProcess):
         )
     else:
         configs_rule = collection_config.find_one({})
+        config_level = configs_rule["configLevel"]
+        customer_level = collection_user.find_one({"idSystemUser": request_process["idSystemUser"]}, {"level": 1})
+        interest_by_level = 0
+        for level in config_level:
+            if customer_level["level"] == level["level"]:
+                interest_by_level = level["interest"]
+                break
+
         collection_process.insert_one(
             {"idProcesses": request_process["idProcesses"],
              "idPersonalDocuments": request_process["idPersonalDocuments"],
@@ -65,7 +73,7 @@ def create_process(process: SetNewProcess):
              "createdAt": format_iso.timezone_cdmx(),
              "updatedAt": None,
              "tax":  configs_rule["tax"] if configs_rule is not None else 0.16,
-             "interestRate": configs_rule["interest"] if configs_rule is not None else 0.04,
+             "interestRate": interest_by_level if interest_by_level is not 0 else 0.067,
              "idSystemUser": request_process["idSystemUser"],
              "idLoans": request_process["idLoans"],
              "appointmentDate": None,
@@ -176,7 +184,7 @@ def get_process_by_id(id: str):
 def get_personal_info(idSystemUser: str):
 
     user_info = dict(collection_user.find_one(
-        {"idSystemUser": idSystemUser}, {"email": 1, "phoneNumber": 1}))
+        {"idSystemUser": idSystemUser}, {"email": 1, "phoneNumber": 1, "level": 1}))
     profile_info = dict(collection_profile.find_one(
         {"idSystemUser": idSystemUser}, {"_id": 0, "idProfile": 0, "idSystemUser": 0}))
     address_info = profile_info["addressInformation"]
