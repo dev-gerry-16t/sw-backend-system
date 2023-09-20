@@ -94,7 +94,8 @@ async def login_admin(file: UploadFile = File(...)):
                         Key=user
                     )
                     name_user = info_document['Metadata']['name']
-                    info_user = {"name": name_user, "idAdmin": user}
+                    email_user = info_document['Metadata']['email']
+                    info_user = {"name": name_user, "idAdmin": user, "email": email_user}
                     return {"filename": file.filename, **info_user}
             
     raise HTTPException(status_code=500, detail="No se encontro coincidencia")
