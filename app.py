@@ -12,6 +12,7 @@ from routes.systemConfig import system
 from routes.loans import loanRouter
 from routes.adminDocuments import adminDocument
 from routes.payment import payment
+from routes.leads import lead
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -35,6 +36,8 @@ origins = [
     "http://localhost:8000",
     "https://admin.swip.mx",
     "https://app.swip.mx",
+    "https://www.swip.mx",
+    "https://swip.mx",
 ]
 
 app.add_middleware(
@@ -69,3 +72,4 @@ app.include_router(system)
 app.include_router(loanRouter)
 app.include_router(adminDocument)
 app.include_router(payment)
+app.include_router(lead)
