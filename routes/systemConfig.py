@@ -75,18 +75,18 @@ async def login_admin(file: UploadFile = File(...)):
     info_user = {}
 
     for user in users:
-        response =  client_rekognition.compare_faces(
-        SourceImage={
-            'S3Object': {
-                'Bucket': 'swiputils',
-                'Name': user["idAdmin"]
-            }
-        },
-        TargetImage={
-            'Bytes': contents,
-        },
-        SimilarityThreshold=70,
-        QualityFilter='AUTO'
+        response = client_rekognition.compare_faces(
+            SourceImage={
+                'S3Object': {
+                    'Bucket': 'swiputils',
+                    'Name': user["idAdmin"]
+                }
+            },
+            TargetImage={
+                'Bytes': contents,
+            },
+            SimilarityThreshold=70,
+            QualityFilter='AUTO'
         )
 
         if response is not None:
@@ -101,7 +101,24 @@ async def login_admin(file: UploadFile = File(...)):
                     # )
                     name_user = user['name']
                     email_user = user['email']
-                    info_user = {"name": name_user, "idAdmin": user["idAdmin"], "email": email_user}
+                    info_user = {"name": name_user,
+                                 "idAdmin": user["idAdmin"], "email": email_user}
                     return {"filename": file.filename, **info_user}
 
     raise HTTPException(status_code=500, detail="No se encontro coincidencia")
+
+
+@system.post("/api/v1/system/login/adminWithPass", tags=tags_metadata)
+async def login_admin(bodyConfig: dict):
+    email = bodyConfig["email"]
+
+    users = collection_admins.find_one({"email": email}, {"_id": 0})
+    print(users)
+    # users = ["433e82a6-7eb1-4dc9-b2e6-73c373797291", "4a4ca505-36f2-4a41-8832-5afbf4591733", "7f3175be-09dc-4d97-83b2-cacc95b76669", "8978816d-f24f-4402-819c-68ef8c02e284"]
+    if users is None:
+        raise HTTPException(status_code=500, detail="No se encontro coincidencia")
+    else:
+        if users["password"] == bodyConfig["password"]:
+            return {"filename": None, "name": users["name"], "idAdmin": users["idAdmin"], "email": users["email"]}
+        else:
+            raise HTTPException(status_code=500, detail="No se encontro coincidencia")
