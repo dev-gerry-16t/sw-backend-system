@@ -8,6 +8,7 @@ system = APIRouter()
 
 tags_metadata = ["System Config V1"]
 collection_admins = db["adminUsers"]
+collection_configs = db["configs"]
 
 
 @system.post("/api/v1/system/templateEmail/create", tags=tags_metadata)
@@ -116,9 +117,44 @@ async def login_admin(bodyConfig: dict):
     print(users)
     # users = ["433e82a6-7eb1-4dc9-b2e6-73c373797291", "4a4ca505-36f2-4a41-8832-5afbf4591733", "7f3175be-09dc-4d97-83b2-cacc95b76669", "8978816d-f24f-4402-819c-68ef8c02e284"]
     if users is None:
-        raise HTTPException(status_code=500, detail="No se encontro coincidencia")
+        raise HTTPException(
+            status_code=500, detail="No se encontro coincidencia")
     else:
         if users["password"] == bodyConfig["password"]:
             return {"filename": None, "name": users["name"], "idAdmin": users["idAdmin"], "email": users["email"]}
         else:
-            raise HTTPException(status_code=500, detail="No se encontro coincidencia")
+            raise HTTPException(
+                status_code=500, detail="No se encontro coincidencia")
+
+
+@system.get("/api/v1/system/getModalities", tags=tags_metadata)
+def get_modalities():
+    config = collection_configs.find_one({}, {"_id": 0, "modalities": 1})
+    list_modalities = []
+    if config:
+        modalities_data = config.get("modalities")
+        list_modalities = [
+            {"id": item["idModality"], "text": item["nameModality"]}
+            for item in modalities_data
+        ]
+
+    return {
+        "data": list_modalities
+    }
+
+@system.get("/api/v1/system/getPercentagesById/{idModality}", tags=tags_metadata)
+def get_percentages_by_id(idModality: str):
+    config = collection_configs.find_one({}, {"_id": 0, "modalities": 1})
+    list_percentages = []
+    if config:
+        modalities_data = config.get("modalities")
+        for item in modalities_data:
+            if item["idModality"] == idModality:
+                list_percentages = [
+                    {"id": item["idPercentage"], "text": item["namePercentage"]}
+                    for item in item["percentages"]
+                ]
+
+    return {
+        "data": list_percentages
+    }

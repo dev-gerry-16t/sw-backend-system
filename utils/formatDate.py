@@ -1,5 +1,6 @@
 import datetime
 import pytz
+import locale
 from dateutil.relativedelta import relativedelta
 
 class FormatDate:
@@ -31,6 +32,12 @@ class FormatDate:
         final_date = initial_date + relativedelta(months=1)
 
         return final_date.strftime('%Y-%m-%dT%H:%M:%S%z')
+    
+    def date_format_now(self):
+        locale.setlocale(locale.LC_TIME, 'es_ES.UTF-8')
+        date_now = datetime.datetime.now()
+        date_format = date_now.strftime('%d/%B/%Y')
+        return date_format
     
     def diff_dates_since_now(self, date):
         final_date = datetime.datetime.strptime(date, '%Y-%m-%dT%H:%M:%S%z')

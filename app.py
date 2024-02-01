@@ -13,6 +13,7 @@ from routes.loans import loanRouter
 from routes.adminDocuments import adminDocument
 from routes.payment import payment
 from routes.leads import lead
+from routes.price import price
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -73,3 +74,4 @@ app.include_router(loanRouter)
 app.include_router(adminDocument)
 app.include_router(payment)
 app.include_router(lead)
+app.include_router(price)
