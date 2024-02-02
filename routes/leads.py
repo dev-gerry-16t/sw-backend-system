@@ -11,8 +11,9 @@ from utils.getPDFAPI import get_pdf
 from utils.formatDate import FormatDate
 from utils.discountPrice import discount_deprecation, charge_appreciation
 from utils.generalFunctions import generate_invoice_number
-
 load_dotenv()
+
+locale.setlocale(locale.LC_ALL, 'es_MX.UTF-8')
 
 HUBSPOT_API_KEY = os.getenv("HUBSPOT_API_KEY")
 
