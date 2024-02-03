@@ -181,6 +181,23 @@ def select_template_email(id_template, **options):
                 email_to=email_to,
                 template_data={"amountLoan": amount_loan, "user": user}
             )
+            
+    elif id_template == 13:
+        template_name = "SW_WELCOMELEAD_WITHAMOUNT_V1"
+        email_to = options.get("email_to", None)
+        user = options.get("user", None)
+        year = options.get("year", None)
+        brand = options.get("brand", None)
+        model = options.get("model", None)
+        version = options.get("version", None)
+        amount = options.get("amount", None)
+
+        if email_to is not None and user is not None and year is not None and brand is not None and model is not None and version is not None and amount is not None:
+            send_email_template(
+                template_name=template_name,
+                email_to=email_to,
+                template_data={"firstname": user, "year": year, "brand": brand, "model": model, "version": version, "swipBuyPrice": amount}
+            )
 
 # def select_template_email(id_template, **options):
 

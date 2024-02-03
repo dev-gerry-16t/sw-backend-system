@@ -11,6 +11,8 @@ from utils.getPDFAPI import get_pdf
 from utils.formatDate import FormatDate
 from utils.discountPrice import discount_deprecation, charge_appreciation
 from utils.generalFunctions import generate_invoice_number
+from utils.selectTemplateEmail import select_template_email
+
 load_dotenv()
 
 locale.setlocale(locale.LC_ALL, 'es_MX.UTF-8')
@@ -80,7 +82,7 @@ def get_all_leads():
 
 @lead.get("/api/v1/lead/getById/{idLead}", tags=tags_metadata)
 def get_lead_by_id(idLead: str):
-    lead_db = collection_leads.find_one({"idLead": idLead}, {"_id": 0 })
+    lead_db = collection_leads.find_one({"idLead": idLead}, {"_id": 0})
     return {"data": lead_db}
 
 
@@ -141,6 +143,21 @@ def update_lead(leadBody: dict):
             "message": message_to_hubspot
         }
     }
+
+    try:
+
+        select_template_email(
+            id_template=13,
+            email_to=email_user,
+            user=first_name_user,
+            year=year,
+            brand=brand,
+            model=model,
+            version=version,
+            amount=swip_buy_currency_format,
+        )
+    except Exception as e:
+        print(e)
 
     # format_date = FormatDate()
     # date_format = format_date.date_format_now()
