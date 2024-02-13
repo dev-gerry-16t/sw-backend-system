@@ -24,4 +24,5 @@ def get_pdf(body, template, invoice):
 
         return payload
     except Exception as error:
+        print(str(error))
         raise error

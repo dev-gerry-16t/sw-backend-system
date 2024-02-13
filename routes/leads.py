@@ -504,7 +504,7 @@ def generate_price(leadBody: dict):
              return StreamingResponse(io.BytesIO(pdf_content), media_type="application/pdf", headers={"Content-Disposition": "inline; filename=Precotizacion_GPS.pdf"})
 
             except Exception as e:
-                print(e)
+                print(str(e))
                 raise HTTPException(status_code=500, detail=str(e))
 
             # return {"message": "Cotización generada correctamente", "data": data_to_pdf}
@@ -520,13 +520,13 @@ def generate_price(leadBody: dict):
              return StreamingResponse(io.BytesIO(pdf_content), media_type="application/pdf", headers={"Content-Disposition": "inline; filename=Precotizacion_Resguardo.pdf"})
 
             except Exception as e:
-                print(e)
+                print(str(e))
                 raise HTTPException(status_code=500, detail=str(e))
 
             # return {"message": "Cotización generada correctamente", "data": data_to_pdf}
 
     except Exception as e:
-        print(e)
+        print(str(e))
         raise HTTPException(status_code=500, detail={"dbMessage": str(
             e), "errorMessage": "Hubo un error al intentar generar el pdf"})
 
