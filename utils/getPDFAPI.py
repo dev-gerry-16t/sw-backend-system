@@ -6,7 +6,7 @@ def get_pdf(body, template, invoice):
     try:
         token = generate_jwt_token()
 
-        url = f"https://us1.pdfgeneratorapi.com/api/v3/templates/{template}/output?name={invoice}&format=pdf&output=url"
+        url = f"https://us1.pdfgeneratorapi.com/api/v3/templates/{template}/output?name={invoice}&format=pdf&output=base64"
         headers = {
             "Authorization": f"Bearer {token}",
             "Content-Type": "application/json"

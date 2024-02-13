@@ -1,5 +1,11 @@
-def generate_invoice_number(id_system, id_third_party_service):
+from utils.generateUUID import generate_UUID
+
+def generate_invoice_number(name, id_system):
+    id_invoice = generate_UUID()
+
     parts = id_system.split("-")
-    invoice_number = "PRESW" + "-" + parts[0] + "-" + id_third_party_service
+    parts_invoice = id_invoice.split("-")
+
+    invoice_number = name + "-" + parts[0] + "-" + parts_invoice[0]
 
     return invoice_number
