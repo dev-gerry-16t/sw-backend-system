@@ -460,6 +460,8 @@ def generate_quote(leadBody: dict):
 
 @lead.post("/api/v1/lead/generatePrice", tags=tags_metadata)
 def generate_price(leadBody: dict):
+    locale.setlocale(locale.LC_ALL, 'es_MX.utf8')
+
 
     id_modality = leadBody["idModality"]
     id_lead = leadBody["idLead"]

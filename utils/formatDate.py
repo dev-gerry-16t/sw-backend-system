@@ -1,6 +1,5 @@
 import datetime
 import pytz
-import locale
 from dateutil.relativedelta import relativedelta
 
 class FormatDate:
@@ -34,7 +33,6 @@ class FormatDate:
         return final_date.strftime('%Y-%m-%dT%H:%M:%S%z')
     
     def date_format_now(self):
-        locale.setlocale(locale.LC_TIME, 'es_ES.UTF-8')
         date_now = datetime.datetime.now()
         date_format = date_now.strftime('%d/%B/%Y')
         return date_format
