@@ -468,8 +468,10 @@ def generate_price(leadBody: dict):
     name_price = leadBody["namePrice"]
     format_date = FormatDate()
     date_format = format_date.date_format_now()
+    date_end = format_date.last_day_of_month()
 
     data_to_pdf = {"priceAt": date_format,
+                   "priceEndAt": date_end,
                    "vehicleType": "Automóvil",
                    "brand": leadBody["brand"],
                    "model": leadBody["model"],
