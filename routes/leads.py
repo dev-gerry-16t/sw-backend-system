@@ -6,7 +6,7 @@ import base64
 import io
 from dotenv import load_dotenv
 from fastapi import APIRouter, HTTPException
-from fastapi.responses import  StreamingResponse
+from fastapi.responses import StreamingResponse
 from config.db import db
 from utils.generateUUID import generate_UUID
 from utils.slackWebhook import send_slack_message_to_lead, send_slack_message
@@ -77,14 +77,15 @@ def create_lead(leadBody: dict):
 @lead.get("/api/v1/lead/getAll", tags=tags_metadata)
 def get_all_leads():
     leads_db = list(collection_leads.find({}, {"_id": 0, "idLead": 1, "idHubspot": 1,
-                    "name": 1, "email": 1, "phoneNumber": 1, "message": 1, "idStatus": 11}))
+                    "name": 1, "email": 1, "phoneNumber": 1, "message": 1, "idStatus": 1, "modalitySubname": 1}))
     leads_db.reverse()
     return {"data": leads_db}
 
 
 @lead.get("/api/v1/lead/getById/{idLead}", tags=tags_metadata)
 def get_lead_by_id(idLead: str):
-    lead_db = collection_leads.find_one({"idLead": idLead}, {"_id": 0})
+    lead_db = collection_leads.find_one(
+        {"idLead": idLead}, {"_id": 0, "prices": 0})
     return {"data": lead_db}
 
 
@@ -274,6 +275,7 @@ def update_lead(leadBody: dict):
 
     return {"message": "Lead updated successfully"}
 
+
 @lead.put("/api/v1/lead/updateCarInformation/{idLead}", tags=tags_metadata)
 def update_car_information(idLead: str, leadBody: dict):
     id_lead = idLead
@@ -313,6 +315,19 @@ def update_car_information(idLead: str, leadBody: dict):
     return {"message": "Car information updated successfully"}
 
 
+@lead.post("/api/v1/lead/getDataQuoteById", tags=tags_metadata)
+def get_data_quote_by_id(leadBody: dict):
+    id_lead = leadBody["idLead"]
+    invoice = leadBody["invoice"]
+    result = collection_leads.find_one({"prices": {"$elemMatch": {
+        "invoice": invoice}}}, {"_id": 0, "prices.$": 1})
+
+    if result:
+        return {"data": result["prices"][0]}
+    else:
+        return {"data": {}}
+
+
 @lead.post("/api/v1/lead/generateQuote", tags=tags_metadata)
 def generate_quote(leadBody: dict):
 
@@ -325,6 +340,7 @@ def generate_quote(leadBody: dict):
     # amountPrice
 
     # print(leadBody)
+    id_lead = leadBody["idLead"]
 
     pawn_modality = leadBody["pawnModality"]
     sell_price = leadBody["sellPrice"]
@@ -419,6 +435,13 @@ def generate_quote(leadBody: dict):
             amount_monthly_total, tax_rate)
 
         data_to_frontend = {
+            "pawnModality": pawn_modality,
+            "sellPrice": sell_price,
+            "buyPrice":     buy_price,
+            "sellPriceAutometric": sell_price_autometric,
+            "buyPriceAutometric": buy_price_autometric,
+            "typeAmountToPawn": type_amount_to_pawn,
+            "amountPrice": amount_price,
             "amountToFinance": amount_to_finance,
             "modalitySubname": modality_subname,
             "amountMonthlyGuard": amount_monthly_guard,
@@ -437,6 +460,17 @@ def generate_quote(leadBody: dict):
             "idModality": pawn_modality,
             "amountAppraisal": lower_buy_value,
         }
+
+        if pawn_modality == "e9c6b545-a4a6-4243-a651-84116cbb739d":
+            invoice = generate_invoice_number("PRESTP", id_lead)
+            data_to_frontend["invoice"] = invoice
+
+        if pawn_modality == "e3a6f8b8-7b7a-4551-888c-7845c8575e00":
+            invoice = generate_invoice_number("PRECTP", id_lead)
+            data_to_frontend["invoice"] = invoice
+
+        collection_leads.update_one(
+            {"idLead": id_lead}, {"$set": {"invoice": data_to_frontend["invoice"], "idModality": data_to_frontend["idModality"], "modalitySubname": data_to_frontend["modalitySubname"], "idStatus": 2, }, "$addToSet": {"prices": data_to_frontend}})
 
         # if type_amount_to_pawn == "sellPrice":
         #     amount_to_finance = sell_price
@@ -462,9 +496,7 @@ def generate_quote(leadBody: dict):
 def generate_price(leadBody: dict):
     locale.setlocale(locale.LC_ALL, 'es_MX.utf8')
 
-
     id_modality = leadBody["idModality"]
-    id_lead = leadBody["idLead"]
     name_price = leadBody["namePrice"]
     format_date = FormatDate()
     date_format = format_date.date_format_now()
@@ -474,6 +506,7 @@ def generate_price(leadBody: dict):
                    "priceEndAt": date_end,
                    "vehicleType": "Automóvil",
                    "brand": leadBody["brand"],
+                   "invoice": leadBody["invoice"],
                    "model": leadBody["model"],
                    "year": leadBody["year"],
                    "version": leadBody["version"],
@@ -487,7 +520,7 @@ def generate_price(leadBody: dict):
                    "amountToDeposit": leadBody["amountToDeposit"],
                    "interestRate": leadBody["interestRate"] * 100,
                    "amountMonthlyInterestRate": leadBody["amountMonthlyInterestRate"],
-                   "taxRate": leadBody["taxRate"] *100,
+                   "taxRate": leadBody["taxRate"] * 100,
                    "amountMonthlyTotalWithTax": leadBody["amountMonthlyTotalWithTax"],
                    "amountMonthlyTotal": leadBody["amountMonthlyTotal"],
                    "idModality": leadBody["idModality"],
@@ -495,15 +528,13 @@ def generate_price(leadBody: dict):
 
     try:
         if id_modality == "e9c6b545-a4a6-4243-a651-84116cbb739d":
-            invoice = generate_invoice_number("PRESTP", id_lead)
-            data_to_pdf["invoice"] = invoice
 
             result = get_pdf(data_to_pdf, "959242", "PreCotizacion_GPS")
             result_path = result["path"]
 
             try:
-             pdf_content = base64.b64decode(result_path)
-             return StreamingResponse(io.BytesIO(pdf_content), media_type="application/pdf", headers={"Content-Disposition": "inline; filename=Precotizacion_GPS.pdf"})
+                pdf_content = base64.b64decode(result_path)
+                return StreamingResponse(io.BytesIO(pdf_content), media_type="application/pdf", headers={"Content-Disposition": "inline; filename=Precotizacion_GPS.pdf"})
 
             except Exception as e:
                 print(str(e))
@@ -512,20 +543,19 @@ def generate_price(leadBody: dict):
             # return {"message": "Cotización generada correctamente", "data": data_to_pdf}
 
         if id_modality == "e3a6f8b8-7b7a-4551-888c-7845c8575e00":
-            invoice = generate_invoice_number("PRECTP", id_lead)
 
             result = get_pdf(data_to_pdf, "959245", "PreCotizacion_Resguardo")
             result_path = result["path"]
 
             try:
-             pdf_content = base64.b64decode(result_path)
-             return StreamingResponse(io.BytesIO(pdf_content), media_type="application/pdf", headers={"Content-Disposition": "inline; filename=Precotizacion_Resguardo.pdf"})
+                pdf_content = base64.b64decode(result_path)
+                return StreamingResponse(io.BytesIO(pdf_content), media_type="application/pdf", headers={"Content-Disposition": "inline; filename=Precotizacion_Resguardo.pdf"})
 
             except Exception as e:
                 print(str(e))
                 raise HTTPException(status_code=500, detail=str(e))
 
-            # return {"message": "Cotización generada correctamente", "data": data_to_pdf}
+        # return {"message": "Cotización generada correctamente", "data": data_to_pdf}
 
     except Exception as e:
         print(str(e))
