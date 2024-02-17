@@ -154,7 +154,7 @@ def get_price(data_price: dict, x_key_book: str = Header(default=None)):
 
         try:
             discount_adjustment_market = int(response_json["Compra"])
-            swip_price = discount_adjustment_market * 0.8
+            swip_price = discount_adjustment_market * 0.75
 
 
         except ValueError:
