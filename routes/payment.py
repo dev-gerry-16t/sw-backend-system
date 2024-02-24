@@ -161,7 +161,8 @@ async def upload_file(file: UploadFile = File(...),
                 collection_loan.update_one(query, update)
                 collection_process.update_one({"idProcesses": data_json["idProcesses"]}, {"$set": {"amountAvailable": new_amount_available}})
             elif id_payment_type == 3:
-                amount_to_capital = amount_total - find_loan_info["amountMonthly"]
+                # amount_to_capital = amount_total - find_loan_info["amountMonthly"]
+                amount_to_capital = amount_total
                 document_process = collection_process.find_one({"idProcesses": data_json["idProcesses"]})
                 amount_available = document_process["amountAvailable"] + amount_to_capital
                 new_amount_loan = find_loan_info["amountLoan"] - amount_to_capital
@@ -173,7 +174,7 @@ async def upload_file(file: UploadFile = File(...),
                 update = {"$push": {"loans.$.historyPayment": new_history_payment},
                         "$set": {
                             "loans.$.idStatus": 1, 
-                            "loans.$.nextPaymentAt": next_payment_at, 
+                            # "loans.$.nextPaymentAt": next_payment_at, 
                             "loans.$.amountLoan": new_amount_loan, 
                             "loans.$.amountLoanInitial": find_loan_info["amountLoan"],
                             "loans.$.amountInterest": new_amount_interest,
