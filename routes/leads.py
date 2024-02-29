@@ -449,14 +449,18 @@ def generate_quote(leadBody: dict):
             amount_monthly_gps = get_data_config["gpsMonthly"]
             amount_to_deposit = amount_to_finance - amount_monthly_gps_install
 
-            if reference_for_interest_rate and amount_to_finance > reference_for_interest_rate:
+            if reference_for_interest_rate and amount_to_finance >= reference_for_interest_rate:
                 interest_rate = modality["interestRateMin"]
             elif reference_for_interest_rate and amount_to_finance < reference_for_interest_rate:
                 interest_rate = modality["interestRateMax"]
         else:
             amount_monthly_guard = get_data_config["carGuard"]
             amount_to_deposit = amount_to_finance
-            interest_rate = modality["interestRateMax"]
+
+            if reference_for_interest_rate and amount_to_finance >= reference_for_interest_rate:
+                interest_rate = modality["interestRateMin"]
+            elif reference_for_interest_rate and amount_to_finance < reference_for_interest_rate:
+                interest_rate = modality["interestRateMax"]
         # terminan reglas de negocio
 
         # calculos de negocio
