@@ -374,7 +374,10 @@ def generate_quote(leadBody: dict):
     # print(leadBody)
     id_lead = leadBody["idLead"]
 
+
+
     pawn_modality = leadBody["pawnModality"]
+    name_user = leadBody["name"]
     sell_price = leadBody["sellPrice"]
     buy_price = leadBody["buyPrice"]
     sell_price_autometric = leadBody["sellPriceAutometric"]
@@ -506,7 +509,7 @@ def generate_quote(leadBody: dict):
             data_to_frontend["invoice"] = invoice
 
         collection_leads.update_one(
-            {"idLead": id_lead}, {"$set": {"invoice": data_to_frontend["invoice"], "idModality": data_to_frontend["idModality"], "modalitySubname": data_to_frontend["modalitySubname"], "idStatus": 2, }, "$addToSet": {"prices": data_to_frontend}})
+            {"idLead": id_lead}, {"$set": {"name": name_user,"invoice": data_to_frontend["invoice"], "idModality": data_to_frontend["idModality"], "modalitySubname": data_to_frontend["modalitySubname"], "idStatus": 2, }, "$addToSet": {"prices": data_to_frontend}})
 
         # if type_amount_to_pawn == "sellPrice":
         #     amount_to_finance = sell_price
@@ -539,7 +542,7 @@ def generate_price(leadBody: dict):
     date_end = format_date.last_day_of_month()
 
     data_to_pdf = {"priceAt": date_format,
-                   "userName" : leadBody["userName"],
+                   "name" : leadBody["name"],
                    "priceEndAt": date_end,
                    "vehicleType": "Automóvil",
                    "brand": leadBody["brand"],
