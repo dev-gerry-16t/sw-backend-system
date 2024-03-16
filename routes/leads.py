@@ -30,12 +30,16 @@ collection_configs = db["configs"]
 
 @lead.post("/api/v1/lead/create", tags=tags_metadata)
 def create_lead(leadBody: dict):
+    format_iso = FormatDate()
+
     id_lead = generate_UUID()
     # https://api.hubapi.com/crm/v3/objects/contacts
     first_name = leadBody["firstname"]
     email = leadBody["email"]
     phone = leadBody["phone"]
     message = leadBody["message"]
+    created_at = format_iso.timezone_cdmx()
+
     try:
         response = requests.post(
             url="https://api.hubapi.com/crm/v3/objects/contacts",
@@ -63,6 +67,7 @@ def create_lead(leadBody: dict):
             "phoneNumber": phone,
             "message": message,
             "idStatus": 1,
+            "createdAt": created_at,
         }
 
         collection_leads.create_index("idLead", unique=True)
@@ -76,6 +81,8 @@ def create_lead(leadBody: dict):
 @lead.post("/api/v2/lead/create", tags=tags_metadata)
 def create_lead(leadBody: dict):
     locale.setlocale(locale.LC_ALL, 'es_MX.utf8')
+    format_iso = FormatDate()
+
 
     id_lead = generate_UUID()
     # https://api.hubapi.com/crm/v3/objects/contacts
@@ -83,6 +90,7 @@ def create_lead(leadBody: dict):
     email_user = leadBody["email"]
     phone_user = leadBody["phone"]
     message_user = leadBody["message"]
+    created_at = format_iso.timezone_cdmx()
 
     id_year = leadBody["idYear"]
     id_brand = leadBody["idBrand"]
@@ -169,6 +177,7 @@ def create_lead(leadBody: dict):
             "phoneNumber": phone_user,
             "message": message_user,
             "idStatus": 1,
+            "created_at": created_at,
             "carInformation": car_lead,
         }
         
@@ -362,6 +371,7 @@ def get_data_quote_by_id(leadBody: dict):
 
 @lead.post("/api/v1/lead/generateQuote", tags=tags_metadata)
 def generate_quote(leadBody: dict):
+    format_iso = FormatDate()
 
     # pawnModality
     # sellPrice
@@ -422,6 +432,7 @@ def generate_quote(leadBody: dict):
     amount_monthly_total_with_tax = 0
     amount_monthly_total = 0
     has_gps = False
+    created_at = format_iso.timezone_cdmx()
 
     result = collection_configs.find_one({"modalities": {"$elemMatch": {
                                          "idModality": pawn_modality}}}, {"_id": 0, "modalities.$": 1})
@@ -498,6 +509,7 @@ def generate_quote(leadBody: dict):
             "whatSellAmountWasSelected": what_sell_amount_was_selected,
             "idModality": pawn_modality,
             "amountAppraisal": lower_buy_value,
+            "createdAt": created_at,
         }
 
         if pawn_modality == "e9c6b545-a4a6-4243-a651-84116cbb739d":
